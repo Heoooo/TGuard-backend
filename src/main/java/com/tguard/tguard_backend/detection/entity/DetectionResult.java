@@ -1,6 +1,6 @@
-package com.tguard.tguard_backend.detection;
+package com.tguard.tguard_backend.detection.entity;
 
-import com.tguard.tguard_backend.transaction.Transaction;
+import com.tguard.tguard_backend.transaction.entity.Transaction;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;

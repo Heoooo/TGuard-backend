@@ -1,5 +1,6 @@
-package com.tguard.tguard_backend.rule;
+package com.tguard.tguard_backend.blockeduser.entity;
 
+import com.tguard.tguard_backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -11,33 +12,30 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Rule {
+public class BlockedUser {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String ruleName;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Column(nullable = false)
-    private String condition;
-
-    @Column(nullable = false)
-    private String value;
+    private String reason;
 
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime blockedAt;
 
     @PrePersist
     public void prePersist() {
-        this.createdAt = LocalDateTime.now();
+        this.blockedAt = LocalDateTime.now();
     }
 
     @Builder
-    private Rule(String ruleName, String condition, String value) {
-        this.ruleName = ruleName;
-        this.condition = condition;
-        this.value = value;
+    private BlockedUser(User user, String reason) {
+        this.user = user;
+        this.reason = reason;
     }
 }

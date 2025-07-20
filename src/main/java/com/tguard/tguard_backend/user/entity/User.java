@@ -1,4 +1,4 @@
-package com.tguard.tguard_backend.user;
+package com.tguard.tguard_backend.user.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
