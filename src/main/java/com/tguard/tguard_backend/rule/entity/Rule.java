@@ -40,4 +40,10 @@ public class Rule {
         this.condition = condition;
         this.value = value;
     }
+
+    public void update(String ruleName, String condition, String value) {
+        this.ruleName = ruleName;
+        this.condition = condition;
+        this.value = value;
+    }
 }
