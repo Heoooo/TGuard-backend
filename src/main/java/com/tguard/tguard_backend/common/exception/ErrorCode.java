@@ -19,6 +19,7 @@ public enum ErrorCode {
 
     //탐지 관련
     DETECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "이상 거래 탐지에 실패했습니다."),
+    DETECTION_RESULT_NOT_FOUND(HttpStatus.NOT_FOUND, "탐지 결과를 찾을 수 없습니다."),
 
     //공통
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다."),
