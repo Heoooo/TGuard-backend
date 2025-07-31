@@ -1,6 +1,8 @@
 package com.tguard.tguard_backend.transaction.service;
 
 import com.tguard.tguard_backend.detection.service.DetectionResultService;
+import com.tguard.tguard_backend.kafka.dto.TransactionEvent;
+import com.tguard.tguard_backend.kafka.producer.TransactionEventProducer;
 import com.tguard.tguard_backend.transaction.dto.TransactionRequest;
 import com.tguard.tguard_backend.transaction.dto.TransactionResponse;
 import com.tguard.tguard_backend.transaction.entity.Transaction;
@@ -21,6 +23,7 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final DetectionResultService detectionResultService;
+    private final TransactionEventProducer transactionEventProducer;
 
     /**
      * 사용자 거래를 생성하고, 이상 탐지 로직을 호출한다.
@@ -45,8 +48,17 @@ public class TransactionService {
         // 3. 거래 저장
         transactionRepository.save(transaction);
 
-        // 4. 이상 거래 탐지 수행
-        detectionResultService.analyzeAndSave(transaction);
+        TransactionEvent event = new TransactionEvent(
+                transaction.getId(),
+                user.getId(),
+                transaction.getAmount(),
+                transaction.getLocation(),
+                transaction.getDeviceInfo(),
+                transaction.getTransactionTime(),
+                transaction.getChannel().name()
+        );
+
+        transactionEventProducer.send(event);
 
         // 5. 응답 DTO로 반환
         return toResponse(transaction);
