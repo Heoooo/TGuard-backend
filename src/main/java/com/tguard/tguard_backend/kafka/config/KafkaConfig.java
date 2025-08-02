@@ -82,4 +82,12 @@ public class KafkaConfig {
                 .replicas(1)      // 복제 수
                 .build();
     }
+
+    @Bean
+    public NewTopic transactionsDlqTopic() {
+        return TopicBuilder.name("transactions-dlq")
+                .partitions(1)
+                .replicas(1)
+                .build();
+    }
 }
