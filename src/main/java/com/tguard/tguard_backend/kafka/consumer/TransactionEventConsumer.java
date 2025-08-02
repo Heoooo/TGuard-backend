@@ -18,37 +18,30 @@ import org.springframework.stereotype.Component;
 @Component
 public class TransactionEventConsumer {
 
-    private final ObjectMapper objectMapper;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final DetectionResultService detectionResultService;
 
     @KafkaListener(topics = "transactions", groupId = "fraud-group")
-    public void consume(String message) {
-        try {
-            TransactionEvent event = objectMapper.readValue(message, TransactionEvent.class);
+    public void consume(TransactionEvent event) {
+        log.info("Kafka 수신: {}", event);
 
-            log.info("Kafka 수신: {}", event);
+        User user = userRepository.findById(event.userId())
+                .orElseThrow(() -> new RuntimeException("User not found: " + event.userId()));
 
-            User user = userRepository.findById(event.userId())
-                    .orElseThrow(() -> new RuntimeException("User not found: " + event.userId()));
+        Transaction transaction = Transaction.builder()
+                .user(user)
+                .amount(event.amount())
+                .location(event.location())
+                .deviceInfo(event.deviceInfo())
+                .transactionTime(event.transactionTime())
+                .status(Transaction.Status.PENDING)
+                .channel(Channel.valueOf(event.channel()))
+                .build();
 
-            Transaction transaction = Transaction.builder()
-                    .user(user)
-                    .amount(event.amount())
-                    .location(event.location())
-                    .deviceInfo(event.deviceInfo())
-                    .transactionTime(event.transactionTime())
-                    .status(Transaction.Status.PENDING)
-                    .channel(Channel.valueOf(event.channel()))
-                    .build();
+        transactionRepository.save(transaction);
 
-            transactionRepository.save(transaction);
+        detectionResultService.analyzeAndSave(transaction);
 
-            detectionResultService.analyzeAndSave(transaction);
-
-        } catch (Exception e) {
-            log.error("Kafka 처리 실패: {}", message, e);
-        }
     }
 }
