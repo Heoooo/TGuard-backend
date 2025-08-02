@@ -11,15 +11,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class TransactionEventProducer {
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
-    private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, TransactionEvent> kafkaTemplate;
 
     public void send(TransactionEvent event) {
-        try {
-            String message = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send("transactions", message);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
-        }
+        kafkaTemplate.send("transactions", event);
     }
 }
