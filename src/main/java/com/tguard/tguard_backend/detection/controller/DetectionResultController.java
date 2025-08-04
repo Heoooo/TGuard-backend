@@ -26,7 +26,7 @@ public class DetectionResultController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<DetectionResultResponse>> getOne(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<DetectionResultResponse>> getOne(@PathVariable("id") Long id) {
         DetectionResultResponse result = detectionResultQueryService.getResultById(id);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
