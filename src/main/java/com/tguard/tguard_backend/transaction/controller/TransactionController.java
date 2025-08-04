@@ -19,10 +19,9 @@ public class TransactionController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<TransactionResponse>> create(
-            @RequestParam Long userId,
             @RequestBody @Valid TransactionRequest request
     ) {
-        TransactionResponse result = transactionService.createTransaction(userId, request);
+        TransactionResponse result = transactionService.createTransaction(request.userId(),request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(result));
     }
 
