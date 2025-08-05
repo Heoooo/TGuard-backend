@@ -17,14 +17,18 @@ public class Rule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String ruleName;
 
     @Column(nullable = false)
-    private String condition;
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private RuleType type; // AMOUNT, LOCATION, PATTERN, DEVICE 등
 
     @Column(nullable = false)
-    private String value;
+    private boolean active;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -35,15 +39,18 @@ public class Rule {
     }
 
     @Builder
-    private Rule(String ruleName, String condition, String value) {
+    private Rule(String ruleName, String description, RuleType type, boolean active) {
         this.ruleName = ruleName;
-        this.condition = condition;
-        this.value = value;
+        this.description = description;
+        this.type = type;
+        this.active = active;
     }
 
-    public void update(String ruleName, String condition, String value) {
-        this.ruleName = ruleName;
-        this.condition = condition;
-        this.value = value;
+    public void toggleActive() {
+        this.active = !this.active;
+    }
+
+    public void updateDescription(String description) {
+        this.description = description;
     }
 }
