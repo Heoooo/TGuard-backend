@@ -43,6 +43,20 @@ public class RuleInitializer {
                     .type(RuleType.PATTERN)
                     .active(false) // 기본 비활성화
                     .build());
+
+            ruleRepository.save(Rule.builder()
+                    .ruleName("Device Change Rule")
+                    .description("30분 내 다른 디바이스에서 거래 시 탐지")
+                    .type(RuleType.PATTERN)
+                    .active(true)
+                    .build());
+
+            ruleRepository.save(Rule.builder()
+                    .ruleName("Rapid Sequential Transactions Rule")
+                    .description("1분 내 연속 3회 거래 시 탐지")
+                    .type(RuleType.PATTERN)
+                    .active(true)
+                    .build());
         }
     }
 }
