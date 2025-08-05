@@ -1,5 +1,6 @@
 package com.tguard.tguard_backend.detection.entity;
 
+import com.tguard.tguard_backend.rule.entity.Rule;
 import com.tguard.tguard_backend.transaction.entity.Transaction;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -18,23 +19,33 @@ public class DetectionResult {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "transaction_id")
     private Transaction transaction;
 
-    @Column(nullable = false)
-    private Boolean isSuspicious;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "rule_id")
+    private Rule rule;
 
+    @Column(nullable = false)
+    private boolean suspicious;
+
+    @Column(nullable = false)
     private String reason;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime detectedAt;
 
+    @PrePersist
+    public void prePersist() {
+        this.detectedAt = LocalDateTime.now();
+    }
+
     @Builder
-    private DetectionResult(Transaction transaction, Boolean isSuspicious, String reason, LocalDateTime detectedAt) {
+    public DetectionResult(Transaction transaction, Rule rule, boolean suspicious, String reason) {
         this.transaction = transaction;
-        this.isSuspicious = isSuspicious;
+        this.rule = rule;
+        this.suspicious = suspicious;
         this.reason = reason;
-        this.detectedAt = detectedAt;
     }
 }
