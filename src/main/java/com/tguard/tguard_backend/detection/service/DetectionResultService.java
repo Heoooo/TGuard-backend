@@ -22,7 +22,7 @@ import java.util.List;
 public class DetectionResultService {
 
     private final RuleRepository ruleRepository;
-    private final TransactionRepository transactionRepository;
+    private final DetectionResultRepository detectionResultRepository;
     private final RedisTemplate<String, String> redisTemplate;
     private final DefaultUserNotifier userNotifier;
 
@@ -88,8 +88,14 @@ public class DetectionResultService {
 
     /** 탐지 결과 저장 로직 (추가 구현 예정) */
     private void saveDetectionResult(Transaction transaction, Rule rule) {
-        // DetectionResult 엔티티에 기록 (탐지 시각, Rule 이름, 거래 ID 등)
-        // 예: detectionResultRepository.save(new DetectionResult(...));
+        DetectionResult result = DetectionResult.builder()
+                .transaction(transaction)
+                .rule(rule)
+                .suspicious(true)
+                .reason(rule.getRuleName()) // Rule 이름 저장
+                .build();
+
+        detectionResultRepository.save(result);
     }
 
     private boolean deviceChangeCheck(Transaction transaction) {
