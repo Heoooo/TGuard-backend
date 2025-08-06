@@ -2,6 +2,7 @@ package com.tguard.tguard_backend.notification;
 
 import com.tguard.tguard_backend.notification.entity.Notification;
 import com.tguard.tguard_backend.notification.repository.NotificationRepository;
+import com.tguard.tguard_backend.notification.sms.TwilioSmsSender;
 import com.tguard.tguard_backend.transaction.entity.Transaction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 public class DefaultUserNotifier implements UserNotifier {
 
     private final NotificationRepository notificationRepository;
+    private final TwilioSmsSender smsSender;
 
     @Override
     public void notifyFraud(Transaction transaction, String ruleName) {
@@ -32,8 +34,7 @@ public class DefaultUserNotifier implements UserNotifier {
 
         log.info("웹 알림 저장 완료: {}", message);
 
-        // 2. SMS 알림 (Stub)
-        sendSms(transaction.getUser().getPhoneNumber(), message);
+        smsSender.sendSms(transaction.getUser().getPhoneNumber(), message);
     }
 
     private void sendSms(String phoneNumber, String message) {
