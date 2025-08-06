@@ -34,10 +34,15 @@ public class DefaultUserNotifier implements UserNotifier {
 
         log.info("웹 알림 저장 완료: {}", message);
 
-        smsSender.sendSms(transaction.getUser().getPhoneNumber(), message);
+        String formattedNumber = formatKoreanNumber(transaction.getUser().getPhoneNumber());
+        smsSender.sendSms(formattedNumber, message);
     }
 
-    private void sendSms(String phoneNumber, String message) {
-        log.info("[SMS 전송] To: {} | Message: {}", phoneNumber, message);
+    private String formatKoreanNumber(String phoneNumber) {
+        if (phoneNumber.startsWith("0")) {
+            return "+82" + phoneNumber.substring(1);
+        }
+        return "+82" + phoneNumber;
     }
+
 }
