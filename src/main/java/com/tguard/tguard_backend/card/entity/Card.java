@@ -5,24 +5,26 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-@Table(name = "cards")
+@Table(name = "cards",
+        uniqueConstraints = @UniqueConstraint(name = "uk_card_owner_brand_last4",
+                columnNames = {"owner_id","brand","last4"}))
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor @Builder
 public class Card {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private User owner;
+
+    @Column(nullable = false, length = 32)
     private String brand;
 
-    @Column(name = "last4")
+    @Column(nullable = false, length = 4)
     private String last4;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+    @Column(length = 50)
+    private String nickname;
 }
