@@ -1,10 +1,11 @@
 package com.tguard.tguard_backend.detection.service;
 
+import com.tguard.tguard_backend.common.tenant.TenantContextHolder;
 import com.tguard.tguard_backend.detection.dto.DetectionResultResponse;
 import com.tguard.tguard_backend.detection.entity.DetectionResult;
-import com.tguard.tguard_backend.detection.repository.DetectionResultRepository;
 import com.tguard.tguard_backend.detection.exception.DetectionResultNotFoundException;
-import com.tguard.tguard_backend.transaction.service.TransactionService;
+import com.tguard.tguard_backend.detection.repository.DetectionResultRepository;
+import com.tguard.tguard_backend.transaction.dto.TransactionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,17 +17,20 @@ import java.util.stream.Collectors;
 public class DetectionResultQueryService {
 
     private final DetectionResultRepository detectionResultRepository;
-    private final TransactionService transactionService;
+    private final TransactionMapper transactionMapper;
 
     public List<DetectionResultResponse> getAllResults() {
-        return detectionResultRepository.findAll()
+        String tenantId = TenantContextHolder.requireTenantId();
+        return detectionResultRepository.findTop10ByTenantIdOrderByDetectedAtDesc(tenantId)
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
     public DetectionResultResponse getResultById(Long id) {
+        String tenantId = TenantContextHolder.requireTenantId();
         DetectionResult result = detectionResultRepository.findById(id)
+                .filter(dr -> tenantId.equals(dr.getTenantId()))
                 .orElseThrow(DetectionResultNotFoundException::new);
         return toResponse(result);
     }
@@ -35,10 +39,10 @@ public class DetectionResultQueryService {
         return new DetectionResultResponse(
                 result.getId(),
                 result.getTransaction().getId(),
-                result.getIsSuspicious(),
+                result.isSuspicious(),
                 result.getReason(),
                 result.getDetectedAt(),
-                transactionService.toResponse(result.getTransaction())
+                transactionMapper.toResponse(result.getTransaction())
         );
     }
 }
