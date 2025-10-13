@@ -8,13 +8,17 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.config.TopicBuilder;
-import org.springframework.kafka.core.*;
-import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
+import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
@@ -26,17 +30,17 @@ import java.util.Map;
 
 @EnableKafka
 @Configuration
+@EnableConfigurationProperties(KafkaTopicProperties.class)
 public class KafkaConfig {
 
     private final KafkaProperties kafkaProperties;
+    private final KafkaTopicProperties topicProperties;
 
-    public KafkaConfig(KafkaProperties kafkaProperties) {
+    public KafkaConfig(KafkaProperties kafkaProperties, KafkaTopicProperties topicProperties) {
         this.kafkaProperties = kafkaProperties;
+        this.topicProperties = topicProperties;
     }
 
-    /**
-     * Producer 설정
-     */
     @Bean
     public ProducerFactory<String, TransactionEvent> producerFactory() {
         Map<String, Object> config = new HashMap<>();
@@ -65,13 +69,10 @@ public class KafkaConfig {
         return new KafkaTemplate<>(dlqProducerFactory());
     }
 
-    /**
-     * Consumer 설정
-     */
     @Bean
     public ConsumerFactory<String, TransactionEvent> consumerFactory() {
         JsonDeserializer<TransactionEvent> deserializer = new JsonDeserializer<>(TransactionEvent.class);
-        deserializer.addTrustedPackages("*"); // 패키지 제한 해제
+        deserializer.addTrustedPackages("*");
 
         Map<String, Object> config = new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapServers());
@@ -85,21 +86,19 @@ public class KafkaConfig {
 
     @Bean
     public DefaultErrorHandler errorHandler(KafkaTemplate<String, DlqEvent> dlqKafkaTemplate) {
-        FixedBackOff backOff = new FixedBackOff(1000L, 2L); // 2회 재시도
+        FixedBackOff backOff = new FixedBackOff(1000L, 2L);
 
-        DefaultErrorHandler errorHandler = new DefaultErrorHandler((consumerRecord, exception) -> {
+        return new DefaultErrorHandler((consumerRecord, exception) -> {
             if (consumerRecord.value() instanceof TransactionEvent event) {
                 DlqEvent dlqEvent = new DlqEvent(
                         event,
-                        exception.getMessage(),
-                        exception.getClass().getSimpleName(),
+                        exception != null ? exception.getMessage() : null,
+                        exception != null ? exception.getClass().getSimpleName() : null,
                         LocalDateTime.now()
                 );
-                dlqKafkaTemplate.send("transactions-dlq", dlqEvent);
+                dlqKafkaTemplate.send(topicProperties.dlq(), dlqEvent);
             }
         }, backOff);
-
-        return errorHandler;
     }
 
     @Bean
@@ -112,20 +111,25 @@ public class KafkaConfig {
         return factory;
     }
 
-    /**
-     * Topic 자동 생성 (개발환경용)
-     */
     @Bean
-    public NewTopic transactionsTopic() {
-        return TopicBuilder.name("transactions")
-                .partitions(1)    // 파티션 수
-                .replicas(1)      // 복제 수
+    public NewTopic realtimeTopic() {
+        return TopicBuilder.name(topicProperties.realtime())
+                .partitions(1)
+                .replicas(1)
                 .build();
     }
 
     @Bean
-    public NewTopic transactionsDlqTopic() {
-        return TopicBuilder.name("transactions-dlq")
+    public NewTopic batchTopic() {
+        return TopicBuilder.name(topicProperties.batch())
+                .partitions(1)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic dlqTopic() {
+        return TopicBuilder.name(topicProperties.dlq())
                 .partitions(1)
                 .replicas(1)
                 .build();
