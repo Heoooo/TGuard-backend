@@ -2,7 +2,9 @@ package com.tguard.tguard_backend.detection.controller;
 
 import com.tguard.tguard_backend.common.ApiResponse;
 import com.tguard.tguard_backend.detection.dto.DetectionResultResponse;
+import com.tguard.tguard_backend.detection.service.DetectionAnalyticsService;
 import com.tguard.tguard_backend.detection.service.DetectionResultQueryService;
+import com.tguard.tguard_backend.detection.service.dto.DetectionSummaryResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,11 +20,18 @@ import java.util.List;
 public class DetectionResultController {
 
     private final DetectionResultQueryService detectionResultQueryService;
+    private final DetectionAnalyticsService detectionAnalyticsService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<DetectionResultResponse>>> getAll() {
         List<DetectionResultResponse> list = detectionResultQueryService.getAllResults();
         return ResponseEntity.ok(ApiResponse.success(list));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<ApiResponse<DetectionSummaryResponse>> getSummary() {
+        DetectionSummaryResponse summary = detectionAnalyticsService.getSummary();
+        return ResponseEntity.ok(ApiResponse.success(summary));
     }
 
     @GetMapping("/{id}")
