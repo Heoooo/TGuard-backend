@@ -17,13 +17,12 @@ public class DefaultUserNotifier implements UserNotifier {
     private final TwilioSmsSender smsSender;
 
     @Override
-    public void notifyFraud(Transaction transaction, String ruleName) {
-        // 1. Web 알림 저장
+    public void notifyFraud(Transaction transaction, String alertSummary) {
         String message = String.format(
-                "[이상거래 탐지] Rule: %s\n금액: %.2f원\n위치: %s\n시간: %s",
-                ruleName,
+                "[Fraud Alert]%n%s%nAmount: %,.0f KRW%nLocation: %s%nTime: %s",
+                alertSummary,
                 transaction.getAmount(),
-                transaction.getLocation(),
+                defaultString(transaction.getLocation(), "unknown"),
                 transaction.getTransactionTime()
         );
 
@@ -32,17 +31,34 @@ public class DefaultUserNotifier implements UserNotifier {
                 .transaction(transaction)
                 .build());
 
-        log.info("웹 알림 저장 완료: {}", message);
+        log.info("Dispatched fraud alert: {}", message);
 
         String formattedNumber = formatKoreanNumber(transaction.getUser().getPhoneNumber());
         smsSender.sendSms(formattedNumber, message);
     }
 
     private String formatKoreanNumber(String phoneNumber) {
-        if (phoneNumber.startsWith("0")) {
-            return "+82" + phoneNumber.substring(1);
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            return phoneNumber;
         }
-        return "+82" + phoneNumber;
+
+        String digitsOnly = phoneNumber.replaceAll("[^0-9]", "");
+        if (digitsOnly.isBlank()) {
+            return phoneNumber;
+        }
+
+        if (digitsOnly.startsWith("82")) {
+            return "+" + digitsOnly;
+        }
+
+        if (digitsOnly.startsWith("0")) {
+            digitsOnly = digitsOnly.substring(1);
+        }
+
+        return "+82" + digitsOnly;
     }
 
+    private String defaultString(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
 }
