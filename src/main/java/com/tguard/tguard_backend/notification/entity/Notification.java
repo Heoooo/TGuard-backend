@@ -11,13 +11,17 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @NoArgsConstructor
+@Table(indexes = @Index(name = "idx_notification_tenant", columnList = "tenant_id"))
 public class Notification {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "tenant_id", nullable = false, length = 64)
+    private String tenantId;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String message;
 
     @Column(nullable = false)
@@ -36,7 +40,8 @@ public class Notification {
     }
 
     @Builder
-    public Notification(String message, Transaction transaction) {
+    public Notification(String tenantId, String message, Transaction transaction) {
+        this.tenantId = tenantId;
         this.message = message;
         this.transaction = transaction;
     }
