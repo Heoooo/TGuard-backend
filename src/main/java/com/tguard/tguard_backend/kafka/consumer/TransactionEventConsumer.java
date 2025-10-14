@@ -1,6 +1,6 @@
 package com.tguard.tguard_backend.kafka.consumer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tguard.tguard_backend.common.tenant.TenantContextHolder;
 import com.tguard.tguard_backend.detection.service.DetectionResultService;
 import com.tguard.tguard_backend.kafka.dto.TransactionEvent;
 import com.tguard.tguard_backend.kafka.producer.DlqProducer;
@@ -26,30 +26,57 @@ public class TransactionEventConsumer {
     private final DetectionResultService detectionResultService;
     private final DlqProducer dlqProducer;
 
-    @KafkaListener(topics = "transactions", groupId = "fraud-group", containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "#{@kafkaTopicProperties.realtime()}", groupId = "fraud-group", containerFactory = "kafkaListenerContainerFactory")
     public void consume(TransactionEvent event) {
+        String tenantId = event.tenantId();
+        TenantContextHolder.setTenantId(tenantId);
         try {
-            log.info("Kafka 수신: {}", event);
-
-            User user = userRepository.findById(event.userId())
-                    .orElseThrow(() -> new RuntimeException("User not found: " + event.userId()));
-
-            Transaction transaction = Transaction.builder()
-                    .user(user)
-                    .amount(event.amount())
-                    .location(event.location())
-                    .deviceInfo(event.deviceInfo())
-                    .transactionTime(event.transactionTime() != null ? event.transactionTime() : LocalDateTime.now())
-                    .status(Transaction.Status.PENDING)
-                    .channel(Channel.valueOf(event.channel()))
-                    .build();
-
-            transactionRepository.save(transaction);
-            detectionResultService.analyzeAndSave(transaction);
-
+            log.info("Realtime transaction received for tenant {}: {}", tenantId, event);
+            Transaction transaction = resolveTransaction(event, tenantId);
+            detectionResultService.analyzeAndSave(tenantId, transaction);
         } catch (Exception e) {
-            log.error("Kafka 처리 실패 - DLQ 전송: {}", event, e);
-            dlqProducer.sendToDlq(event);
+            log.error("Realtime processing failed - DLQ dispatch: {}", event, e);
+            dlqProducer.sendToDlq(event, e);
+        } finally {
+            TenantContextHolder.clear();
+        }
+    }
+
+    private Transaction resolveTransaction(TransactionEvent event, String tenantId) {
+        if (event.transactionId() != null) {
+            return transactionRepository.findByIdAndTenantId(event.transactionId(), tenantId)
+                    .orElseGet(() -> createTransaction(event, tenantId));
+        }
+        return createTransaction(event, tenantId);
+    }
+
+    private Transaction createTransaction(TransactionEvent event, String tenantId) {
+        User user = userRepository.findByIdAndTenantId(event.userId(), tenantId)
+                .orElseThrow(() -> new IllegalStateException("User not found for tenant %s: %s".formatted(tenantId, event.userId())));
+
+        Transaction transaction = Transaction.builder()
+                .tenantId(tenantId)
+                .user(user)
+                .amount(event.amount())
+                .location(event.location())
+                .deviceInfo(event.deviceInfo())
+                .transactionTime(event.transactionTime() != null ? event.transactionTime() : LocalDateTime.now())
+                .status(Transaction.Status.PENDING)
+                .channel(resolveChannel(event.channel()))
+                .build();
+
+        return transactionRepository.save(transaction);
+    }
+
+    private Channel resolveChannel(String channel) {
+        if (channel == null) {
+            return Channel.UNKNOWN;
+        }
+        try {
+            return Channel.valueOf(channel);
+        } catch (IllegalArgumentException ex) {
+            log.warn("Unknown channel '{}' received from transaction event", channel);
+            return Channel.UNKNOWN;
         }
     }
 }
