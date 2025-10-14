@@ -1,5 +1,6 @@
 package com.tguard.tguard_backend.rule.config;
 
+import com.tguard.tguard_backend.common.tenant.TenantProperties;
 import com.tguard.tguard_backend.rule.entity.Rule;
 import com.tguard.tguard_backend.rule.entity.RuleType;
 import com.tguard.tguard_backend.rule.repository.RuleRepository;
@@ -12,51 +13,61 @@ import org.springframework.stereotype.Component;
 public class RuleInitializer {
 
     private final RuleRepository ruleRepository;
+    private final TenantProperties tenantProperties;
 
     @PostConstruct
     public void initDefaultRules() {
-        if (ruleRepository.count() == 0) {
-            ruleRepository.save(Rule.builder()
-                    .ruleName("High Amount Rule")
-                    .description("거래 금액이 1,000,000원 초과 시 탐지")
-                    .type(RuleType.AMOUNT)
-                    .active(true)
-                    .build());
-
-            ruleRepository.save(Rule.builder()
-                    .ruleName("Geo-Location Change Rule")
-                    .description("10분 내 위치 변경 거래 탐지")
-                    .type(RuleType.PATTERN)
-                    .active(true)
-                    .build());
-
-            ruleRepository.save(Rule.builder()
-                    .ruleName("Abroad Transaction Rule")
-                    .description("국내 이외 지역에서 거래 시 탐지")
-                    .type(RuleType.LOCATION)
-                    .active(true)
-                    .build());
-
-            ruleRepository.save(Rule.builder()
-                    .ruleName("Night Time Transaction Rule")
-                    .description("새벽 시간대(01:00~05:00) 거래 탐지")
-                    .type(RuleType.PATTERN)
-                    .active(false) // 기본 비활성화
-                    .build());
-
-            ruleRepository.save(Rule.builder()
-                    .ruleName("Device Change Rule")
-                    .description("30분 내 다른 디바이스에서 거래 시 탐지")
-                    .type(RuleType.PATTERN)
-                    .active(true)
-                    .build());
-
-            ruleRepository.save(Rule.builder()
-                    .ruleName("Rapid Sequential Transactions Rule")
-                    .description("1분 내 연속 3회 거래 시 탐지")
-                    .type(RuleType.PATTERN)
-                    .active(true)
-                    .build());
+        String tenantId = tenantProperties.defaultTenantOr("default");
+        if (!ruleRepository.findByTenantId(tenantId).isEmpty()) {
+            return;
         }
+
+        ruleRepository.save(Rule.builder()
+                .tenantId(tenantId)
+                .ruleName("High Amount Rule")
+                .description("Flag transactions above 1,000,000 KRW")
+                .type(RuleType.AMOUNT)
+                .active(true)
+                .build());
+
+        ruleRepository.save(Rule.builder()
+                .tenantId(tenantId)
+                .ruleName("Geo-Location Change Rule")
+                .description("Flag transactions with location change within 10 minutes")
+                .type(RuleType.LOCATION)
+                .active(true)
+                .build());
+
+        ruleRepository.save(Rule.builder()
+                .tenantId(tenantId)
+                .ruleName("Abroad Transaction Rule")
+                .description("Flag transactions occurring outside the registered country")
+                .type(RuleType.LOCATION)
+                .active(true)
+                .build());
+
+        ruleRepository.save(Rule.builder()
+                .tenantId(tenantId)
+                .ruleName("Night Time Transaction Rule")
+                .description("Flag transactions occurring between 01:00 and 05:00")
+                .type(RuleType.PATTERN)
+                .active(false)
+                .build());
+
+        ruleRepository.save(Rule.builder()
+                .tenantId(tenantId)
+                .ruleName("Device Change Rule")
+                .description("Flag transactions from a different device within 30 minutes")
+                .type(RuleType.DEVICE)
+                .active(true)
+                .build());
+
+        ruleRepository.save(Rule.builder()
+                .tenantId(tenantId)
+                .ruleName("Rapid Sequential Transactions Rule")
+                .description("Flag three or more transactions within one minute")
+                .type(RuleType.PATTERN)
+                .active(true)
+                .build());
     }
 }
