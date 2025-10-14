@@ -10,15 +10,22 @@ public record PipelineProperties(
 ) {
 
     public PipelineProperties {
-        dlq = dlq != null ? dlq : new DlqProperties(3, 60);
+        dlq = dlq != null ? dlq : new DlqProperties(3, 60, 2);
         batch = batch != null ? batch : new BatchProperties(7);
         monitoring = monitoring != null ? monitoring : new MonitoringProperties(500, 15);
     }
 
     public record DlqProperties(
             int maxAttempts,
-            int baseRetryDelaySeconds
-    ) { }
+            int baseRetryDelaySeconds,
+            int warnAttempts
+    ) {
+        public DlqProperties {
+            maxAttempts = Math.max(1, maxAttempts);
+            baseRetryDelaySeconds = Math.max(1, baseRetryDelaySeconds);
+            warnAttempts = warnAttempts <= 0 ? Math.max(1, maxAttempts - 1) : Math.min(warnAttempts, maxAttempts);
+        }
+    }
 
     public record BatchProperties(
             int retentionDays
@@ -33,4 +40,3 @@ public record PipelineProperties(
             int monitoringWindowMinutes
     ) { }
 }
-
