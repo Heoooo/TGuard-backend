@@ -179,9 +179,6 @@ DLQ 파이프라인 : 실패 이벤트 → DlqRetryService 재시도 → Slack �
 ---
 
 ### 문의
-- Maintainer: jinhy (jinhy@example.com)  
+- Maintainer: jinhyeok (jinhyeok9290@gmail.com)  
 - 개선 제안 및 이슈는 GitHub Issues를 통해 등록해주세요.
 
----
-
-> 복잡한 결제 파이프라인에서 실시간 사기 방어가 어떻게 구현되는지, TGuard Backend의 소스와 테스트, 부하 시나리오를 통해 직접 확인해보세요.
