@@ -11,13 +11,22 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "rule",
+        uniqueConstraints = @UniqueConstraint(name = "uk_rule_tenant_name", columnNames = {"tenant_id", "ruleName"}),
+        indexes = @Index(name = "idx_rule_tenant", columnList = "tenant_id"))
 public class Rule {
+    public void setRuleName(String ruleName) { this.ruleName = ruleName; }
+    public void setDescription(String description) { this.description = description; }
+    public void setActive(boolean active) { this.active = active; }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "tenant_id", nullable = false, length = 64)
+    private String tenantId;
+
+    @Column(nullable = false)
     private String ruleName;
 
     @Column(nullable = false)
@@ -25,7 +34,7 @@ public class Rule {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private RuleType type; // AMOUNT, LOCATION, PATTERN, DEVICE 등
+    private RuleType type;
 
     @Column(nullable = false)
     private boolean active;
@@ -39,7 +48,8 @@ public class Rule {
     }
 
     @Builder
-    private Rule(String ruleName, String description, RuleType type, boolean active) {
+    private Rule(String tenantId, String ruleName, String description, RuleType type, boolean active) {
+        this.tenantId = tenantId;
         this.ruleName = ruleName;
         this.description = description;
         this.type = type;
