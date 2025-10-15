@@ -1,5 +1,6 @@
 package com.tguard.tguard_backend.user.service;
 
+import com.tguard.tguard_backend.common.tenant.TenantContextHolder;
 import com.tguard.tguard_backend.user.dto.AuthDtos;
 import com.tguard.tguard_backend.user.entity.User;
 import com.tguard.tguard_backend.user.repository.UserRepository;
@@ -17,13 +18,15 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
 
     public void signUp(AuthDtos.SignUpRequest req) {
-        if (userRepository.existsByUsername(req.getUsername())) {
-            throw new IllegalArgumentException("이미 존재하는 아이디입니다.");
+        String tenantId = TenantContextHolder.requireTenantId();
+        if (userRepository.existsByUsernameAndTenantId(req.getUsername(), tenantId)) {
+            throw new IllegalArgumentException("Username already exists for this tenant.");
         }
-        if (userRepository.existsByPhoneNumber(req.getPhoneNumber())) {
-            throw new IllegalArgumentException("이미 등록된 전화번호입니다.");
+        if (userRepository.existsByPhoneNumberAndTenantId(req.getPhoneNumber(), tenantId)) {
+            throw new IllegalArgumentException("Phone number already registered for this tenant.");
         }
         User user = User.builder()
+                .tenantId(tenantId)
                 .username(req.getUsername())
                 .password(passwordEncoder.encode(req.getPassword()))
                 .phoneNumber(req.getPhoneNumber())
@@ -33,10 +36,11 @@ public class AuthService {
     }
 
     public AuthDtos.TokenResponse login(@Valid AuthDtos.LoginRequest req) {
-        User user = userRepository.findByUsername(req.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("아이디가 존재하지 않습니다."));
+        String tenantId = TenantContextHolder.requireTenantId();
+        User user = userRepository.findByUsernameAndTenantId(req.getUsername(), tenantId)
+                .orElseThrow(() -> new IllegalArgumentException("Username not found."));
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+            throw new IllegalArgumentException("Incorrect password.");
         }
         String token = jwtTokenProvider.createToken(user.getUsername(), user.getRole());
         return new AuthDtos.TokenResponse(token, "Bearer");
