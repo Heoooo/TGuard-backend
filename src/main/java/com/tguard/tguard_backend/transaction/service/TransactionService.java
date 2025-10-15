@@ -1,41 +1,80 @@
 package com.tguard.tguard_backend.transaction.service;
 
-import com.tguard.tguard_backend.detection.service.DetectionResultService;
+import com.tguard.tguard_backend.common.tenant.TenantContextHolder;
 import com.tguard.tguard_backend.kafka.dto.TransactionEvent;
 import com.tguard.tguard_backend.kafka.producer.TransactionEventProducer;
+import com.tguard.tguard_backend.transaction.dto.TransactionMapper;
 import com.tguard.tguard_backend.transaction.dto.TransactionRequest;
 import com.tguard.tguard_backend.transaction.dto.TransactionResponse;
 import com.tguard.tguard_backend.transaction.entity.Transaction;
-import com.tguard.tguard_backend.transaction.repository.TransactionRepository;
 import com.tguard.tguard_backend.transaction.exception.TransactionNotFoundException;
+import com.tguard.tguard_backend.transaction.repository.TransactionRepository;
 import com.tguard.tguard_backend.user.entity.User;
 import com.tguard.tguard_backend.user.exception.UserNotFoundException;
 import com.tguard.tguard_backend.user.repository.UserRepository;
+import com.tguard.tguard_backend.webhook.dto.PaymentWebhookEvent;
+import com.tguard.tguard_backend.webhook.dto.WebhookToTransactionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class TransactionService {
+
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
-    private final DetectionResultService detectionResultService;
     private final TransactionEventProducer transactionEventProducer;
+    private final WebhookToTransactionMapper webhookMapper;
+    private final TransactionMapper transactionMapper;
 
-    /**
-     * 사용자 거래를 생성하고, 이상 탐지 로직을 호출한다.
-     */
+    @Transactional
+    public TransactionResponse recordFromWebhook(PaymentWebhookEvent event) {
+        String tenantId = TenantContextHolder.requireTenantId();
+        Transaction existing = findExistingTransaction(event, tenantId);
+        if (existing != null) {
+            return transactionMapper.toResponse(existing);
+        }
+
+        Transaction saved = transactionRepository.save(webhookMapper.mapToTransaction(event, tenantId));
+        publishTransactionEvent(saved);
+
+        return transactionMapper.toResponse(saved);
+    }
+
+    private Transaction findExistingTransaction(PaymentWebhookEvent event, String tenantId) {
+        if (hasText(event.eventId())) {
+            Optional<Transaction> existing = transactionRepository.findByTenantIdAndExternalEventId(tenantId, event.eventId());
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
+        if (hasText(event.paymentKey())) {
+            Optional<Transaction> existing = transactionRepository.findByTenantIdAndPaymentKey(tenantId, event.paymentKey());
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
+        if (hasText(event.orderId())) {
+            Optional<Transaction> existing = transactionRepository.findByTenantIdAndOrderId(tenantId, event.orderId());
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
+        return null;
+    }
+
     @Transactional
     public TransactionResponse createTransaction(Long userId, TransactionRequest request) {
-        // 1. 사용자 확인
-        User user = userRepository.findById(userId)
+        String tenantId = TenantContextHolder.requireTenantId();
+        User user = userRepository.findByIdAndTenantId(userId, tenantId)
                 .orElseThrow(UserNotFoundException::new);
 
-        // 2. 거래 객체 생성
         Transaction transaction = Transaction.builder()
+                .tenantId(tenantId)
                 .user(user)
                 .amount(request.amount())
                 .location(request.location())
@@ -45,47 +84,35 @@ public class TransactionService {
                 .status(Transaction.Status.PENDING)
                 .build();
 
-        // 3. 거래 저장
-        transactionRepository.save(transaction);
+        Transaction saved = transactionRepository.save(transaction);
+        publishTransactionEvent(saved);
 
-        TransactionEvent event = new TransactionEvent(
-                transaction.getId(),
-                user.getId(),
-                transaction.getAmount(),
-                transaction.getLocation(),
-                transaction.getDeviceInfo(),
-                transaction.getTransactionTime(),
-                transaction.getChannel().name()
-        );
-
-        transactionEventProducer.send(event);
-
-        // 5. 응답 DTO로 반환
-        return toResponse(transaction);
+        return transactionMapper.toResponse(saved);
     }
 
-    /**
-     * 단일 거래 조회
-     */
-    @Transactional
+    @Transactional(readOnly = true)
     public TransactionResponse getTransaction(Long id) {
-        Transaction transaction = transactionRepository.findById(id)
+        String tenantId = TenantContextHolder.requireTenantId();
+        Transaction transaction = transactionRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(TransactionNotFoundException::new);
-        return toResponse(transaction);
+        return transactionMapper.toResponse(transaction);
     }
 
-    /**
-     * 응답 DTO 매핑
-     */
-    public TransactionResponse toResponse(Transaction t) {
-        return new TransactionResponse(
-                t.getId(),
-                t.getUser().getId(),
-                t.getAmount(),
-                t.getLocation(),
-                t.getDeviceInfo(),
-                t.getTransactionTime(),
-                t.getStatus().name()
+    private void publishTransactionEvent(Transaction tx) {
+        TransactionEvent event = new TransactionEvent(
+                tx.getTenantId(),
+                tx.getId(),
+                tx.getUser().getId(),
+                tx.getAmount(),
+                tx.getLocation(),
+                tx.getDeviceInfo(),
+                tx.getTransactionTime(),
+                tx.getChannel().name()
         );
+        transactionEventProducer.send(event);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }
