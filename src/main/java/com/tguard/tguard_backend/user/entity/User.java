@@ -4,22 +4,36 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "users")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor @Builder
+@Table(name = "users",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_user_username_tenant", columnNames = {"username", "tenant_id"}),
+                @UniqueConstraint(name = "uk_user_phone_tenant", columnNames = {"phoneNumber", "tenant_id"})
+        },
+        indexes = {
+                @Index(name = "idx_user_tenant", columnList = "tenant_id")
+        })
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class User {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false) // 로그인 ID
+    @Column(nullable = false)
+    private String tenantId;
+
+    @Column(nullable = false)
     private String username;
 
     @Column(nullable = false)
-    private String password; // BCrypt 해시
+    private String password;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String phoneNumber;
 
     @Column(nullable = false)
-    private String role; // ex) ROLE_USER
+    private String role;
 }
