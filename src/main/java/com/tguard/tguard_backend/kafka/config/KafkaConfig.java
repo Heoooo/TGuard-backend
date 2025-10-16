@@ -30,7 +30,6 @@ import java.util.Map;
 
 @EnableKafka
 @Configuration
-@EnableConfigurationProperties(KafkaTopicProperties.class)
 public class KafkaConfig {
 
     private final KafkaProperties kafkaProperties;
