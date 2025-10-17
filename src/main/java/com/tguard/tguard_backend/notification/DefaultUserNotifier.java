@@ -27,6 +27,7 @@ public class DefaultUserNotifier implements UserNotifier {
         );
 
         notificationRepository.save(Notification.builder()
+                .tenantId(transaction.getTenantId())
                 .message(message)
                 .transaction(transaction)
                 .build());
