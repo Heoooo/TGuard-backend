@@ -41,10 +41,10 @@ public class DlqTransactionRetry {
     @Column(name = "payload", nullable = false, columnDefinition = "TEXT")
     private String payload;
 
-    @Column(name = "error_message")
+    @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
-    @Column(name = "error_type")
+    @Column(name = "error_type", columnDefinition = "TEXT")
     private String errorType;
 
     @Column(name = "attempt_count", nullable = false)
