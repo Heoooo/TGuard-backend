@@ -7,10 +7,10 @@ import com.tguard.tguard_backend.rule.entity.Rule;
 import com.tguard.tguard_backend.rule.repository.RuleRepository;
 import com.tguard.tguard_backend.transaction.entity.Transaction;
 import com.tguard.tguard_backend.transaction.repository.TransactionRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -49,6 +49,7 @@ public class DetectionResultService {
     private final RedisTemplate<String, String> redisTemplate;
     private final DefaultUserNotifier userNotifier;
 
+    @Transactional
     public void analyzeAndSave(String tenantId, Transaction transaction) {
         List<Rule> activeRules = ruleRepository.findByTenantIdAndActiveTrue(tenantId);
 
@@ -83,7 +84,9 @@ public class DetectionResultService {
 
         String summary = buildSummary(totalScore, probability, factors);
         saveDetectionResult(tenantId, transaction, representative.rule(), totalScore, probability, summary);
-        userNotifier.notifyFraud(transaction, summary);
+        Transaction hydrated = transactionRepository.findWithUserByIdAndTenantId(transaction.getId(), tenantId)
+                .orElse(transaction);
+        userNotifier.notifyFraud(hydrated, summary);
     }
 
     private Optional<RiskFactor> evaluateRule(Rule rule, Transaction transaction, RiskContext context, AmountStats amountStats) {
