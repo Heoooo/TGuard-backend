@@ -18,4 +18,6 @@ public interface DlqTransactionRetryRepository extends JpaRepository<DlqTransact
 
     @Query("select r.tenantId, count(r) from DlqTransactionRetry r group by r.tenantId")
     List<Object[]> countPendingByTenant();
+
+    List<DlqTransactionRetry> findTop100ByOrderByCreatedAtDesc();
 }
