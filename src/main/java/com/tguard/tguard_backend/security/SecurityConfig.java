@@ -53,8 +53,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/", "/favicon.ico").permitAll()
                         .requestMatchers("/api/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/tenants/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/webhooks/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/**").hasAnyRole("ADMIN", "USER")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
@@ -66,10 +69,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOriginPattern("*");
-        configuration.setAllowCredentials(false);
+        configuration.setAllowedOriginPatterns(
+                java.util.List.of("http://localhost:5173", "http://127.0.0.1:5173"));
+        configuration.setAllowCredentials(true);
         configuration.addAllowedHeader("Authorization");
         configuration.addAllowedHeader("Content-Type");
+        configuration.addAllowedHeader("X-Tenant-Id");
         configuration.addAllowedHeader("Accept");
         configuration.addAllowedMethod("GET");
         configuration.addAllowedMethod("POST");
