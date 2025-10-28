@@ -11,9 +11,11 @@ import com.tguard.tguard_backend.kafka.producer.TransactionEventProducer;
 import com.tguard.tguard_backend.kafka.repository.DlqTransactionRetryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -150,5 +152,25 @@ public class DlqRetryService {
                 retry.getErrorType()
         ));
         retry.markAlertedUpTo(warnThreshold);
+    }
+
+    @Transactional
+    public void retrySingle(Long messageId) {
+        if (messageId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "messageId is required");
+        }
+        DlqTransactionRetry retry = dlqTransactionRetryRepository.findById(messageId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "DLQ message not found"));
+        try {
+            TransactionEvent event = deserializeTransaction(retry.getPayload());
+            transactionEventProducer.send(event);
+            dlqTransactionRetryRepository.delete(retry);
+            log.info("Manually retried DLQ message id={} tenant={} transaction={}",
+                    retry.getId(), retry.getTenantId(), retry.getTransactionId());
+        } catch (Exception ex) {
+            log.error("Manual DLQ retry failed id={} tenant={} transaction={}",
+                    retry.getId(), retry.getTenantId(), retry.getTransactionId(), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retry DLQ message", ex);
+        }
     }
 }
