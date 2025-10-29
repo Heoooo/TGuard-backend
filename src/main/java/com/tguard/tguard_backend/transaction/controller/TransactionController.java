@@ -4,6 +4,8 @@ import com.tguard.tguard_backend.common.ApiResponse;
 import com.tguard.tguard_backend.transaction.dto.TransactionRequest;
 import com.tguard.tguard_backend.transaction.dto.TransactionResponse;
 import com.tguard.tguard_backend.transaction.service.TransactionService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,10 @@ public class TransactionController {
 
     private final TransactionService transactionService;
 
+    @GetMapping
+    public ResponseEntity<ApiResponse<Page<TransactionResponse>>> list(Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.success(transactionService.listTransactions(pageable)));
+    }
     @PostMapping
     public ResponseEntity<ApiResponse<TransactionResponse>> create(
             @RequestBody @Valid TransactionRequest request
