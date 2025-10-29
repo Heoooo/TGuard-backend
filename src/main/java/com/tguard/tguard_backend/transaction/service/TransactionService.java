@@ -14,6 +14,8 @@ import com.tguard.tguard_backend.user.exception.UserNotFoundException;
 import com.tguard.tguard_backend.user.repository.UserRepository;
 import com.tguard.tguard_backend.webhook.dto.PaymentWebhookEvent;
 import com.tguard.tguard_backend.webhook.dto.WebhookToTransactionMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -96,6 +98,13 @@ public class TransactionService {
         Transaction transaction = transactionRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(TransactionNotFoundException::new);
         return transactionMapper.toResponse(transaction);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TransactionResponse> listTransactions(Pageable pageable) {
+        String tenantId = TenantContextHolder.requireTenantId();
+        return transactionRepository.findByTenantId(tenantId, pageable)
+                .map(transactionMapper::toResponse);
     }
 
     private void publishTransactionEvent(Transaction tx) {
