@@ -1,6 +1,7 @@
 package com.tguard.tguard_backend.rule.service;
 
 import com.tguard.tguard_backend.common.tenant.TenantContextHolder;
+import com.tguard.tguard_backend.rule.dto.RuleRequest;
 import com.tguard.tguard_backend.rule.dto.RuleResponse;
 import com.tguard.tguard_backend.rule.entity.Rule;
 import com.tguard.tguard_backend.rule.exception.RuleNotFoundException;
@@ -45,28 +46,41 @@ public class RuleService {
     }
 
     @Transactional
-    public RuleResponse addRule(Rule rule) {
+    public RuleResponse addRule(RuleRequest request) {
         String tenantId = TenantContextHolder.requireTenantId();
-        if (ruleRepository.existsByTenantIdAndRuleName(tenantId, rule.getRuleName())) {
+        if (ruleRepository.existsByTenantIdAndRuleName(tenantId, request.ruleName())) {
             throw new IllegalArgumentException("Rule name already exists for this tenant.");
         }
         Rule saved = ruleRepository.save(Rule.builder()
                 .tenantId(tenantId)
-                .ruleName(rule.getRuleName())
-                .description(rule.getDescription())
-                .type(rule.getType())
-                .active(rule.isActive())
+                .ruleName(request.ruleName())
+                .description(request.description())
+                .type(request.type())
+                .active(request.activeOrDefault())
                 .build());
         return toResponse(saved);
     }
 
     @Transactional
-    public RuleResponse updateRule(Long id, Rule updated) {
+    public RuleResponse updateRule(Long id, RuleRequest request) {
         Rule rule = getTenantRule(id);
-        rule.setRuleName(updated.getRuleName());
-        rule.setDescription(updated.getDescription());
-        rule.setActive(updated.isActive());
+        rule.setRuleName(request.ruleName());
+        rule.setDescription(request.description());
+        rule.setActive(request.activeOrDefault());
         return toResponse(rule);
+    }
+
+    /* Deprecated admin entity-based operations kept for backward compatibility */
+    @Transactional
+    public RuleResponse addRule(Rule rule) {
+        RuleRequest request = new RuleRequest(rule.getRuleName(), rule.getDescription(), rule.getType(), rule.isActive());
+        return addRule(request);
+    }
+
+    @Transactional
+    public RuleResponse updateRule(Long id, Rule updated) {
+        RuleRequest request = new RuleRequest(updated.getRuleName(), updated.getDescription(), updated.getType(), updated.isActive());
+        return updateRule(id, request);
     }
 
     @Transactional
