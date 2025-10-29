@@ -2,6 +2,8 @@ package com.tguard.tguard_backend.transaction.repository;
 
 import com.tguard.tguard_backend.transaction.entity.Transaction;
 import com.tguard.tguard_backend.user.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -20,6 +22,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     Optional<Transaction> findByIdAndTenantId(Long id, String tenantId);
     @EntityGraph(attributePaths = "user")
     Optional<Transaction> findWithUserByIdAndTenantId(Long id, String tenantId);
+    @EntityGraph(attributePaths = "user")
+    Page<Transaction> findByTenantId(String tenantId, Pageable pageable);
 
     @Query("select t.tenantId, max(t.transactionTime) from Transaction t group by t.tenantId")
     List<Object[]> findLatestTransactionPerTenant();
