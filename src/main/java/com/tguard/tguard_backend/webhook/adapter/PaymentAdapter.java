@@ -33,10 +33,11 @@ public class PaymentAdapter {
 
         String paymentKey = o.optString("paymentKey", null);
         String orderId    = o.optString("orderId", null);
+        String testPhoneNumber = o.optString("testPhoneNumber", o.optString("test_phone_number", null));
 
         return new PaymentWebhookEvent(
                 eventId, status, brand, last4, amount, currency, merchant, channel, deviceInfo, occurredAt,
-                paymentKey, orderId, rawBody
+                paymentKey, orderId, rawBody, testPhoneNumber
         );
     }
 }
