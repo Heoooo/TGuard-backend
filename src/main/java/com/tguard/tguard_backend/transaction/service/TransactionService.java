@@ -14,14 +14,17 @@ import com.tguard.tguard_backend.user.exception.UserNotFoundException;
 import com.tguard.tguard_backend.user.repository.UserRepository;
 import com.tguard.tguard_backend.webhook.dto.PaymentWebhookEvent;
 import com.tguard.tguard_backend.webhook.dto.WebhookToTransactionMapper;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Service
 @RequiredArgsConstructor
@@ -35,16 +38,33 @@ public class TransactionService {
 
     @Transactional
     public TransactionResponse recordFromWebhook(PaymentWebhookEvent event) {
-        String tenantId = TenantContextHolder.requireTenantId();
-        Transaction existing = findExistingTransaction(event, tenantId);
-        if (existing != null) {
-            return transactionMapper.toResponse(existing);
+        Timer.Sample overall = Timer.start(Metrics.globalRegistry);
+        try {
+            String tenantId = TenantContextHolder.requireTenantId();
+
+            Transaction existing = recordTimer("transaction.record.lookup", () -> findExistingTransaction(event, tenantId),
+                    "stage", "duplicate-check");
+            if (existing != null) {
+                return transactionMapper.toResponse(existing);
+            }
+
+            Transaction mapped = recordTimer("transaction.record.map",
+                    () -> webhookMapper.mapToTransaction(event, tenantId),
+                    "stage", "mapper");
+
+            Transaction saved = recordTimer("transaction.record.save",
+                    () -> transactionRepository.save(mapped),
+                    "stage", "persist");
+
+            recordTimer("transaction.record.publish", () -> {
+                publishTransactionEvent(saved);
+                return null;
+            }, "stage", "kafka");
+
+            return transactionMapper.toResponse(saved);
+        } finally {
+            overall.stop(timer("transaction.record.duration", "stage", "overall"));
         }
-
-        Transaction saved = transactionRepository.save(webhookMapper.mapToTransaction(event, tenantId));
-        publishTransactionEvent(saved);
-
-        return transactionMapper.toResponse(saved);
     }
 
     private Transaction findExistingTransaction(PaymentWebhookEvent event, String tenantId) {
@@ -123,5 +143,17 @@ public class TransactionService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private Timer timer(String name, String... tags) {
+        return Timer.builder(name)
+                .publishPercentiles(0.5, 0.9, 0.95, 0.99)
+                .publishPercentileHistogram()
+                .tags(tags)
+                .register(Metrics.globalRegistry);
+    }
+
+    private <T> T recordTimer(String name, Supplier<T> supplier, String... tags) {
+        return timer(name, tags).record(supplier);
     }
 }
