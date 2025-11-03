@@ -17,17 +17,22 @@ public class AuthDtos {
         private String username;
         @NotBlank private String password;
         @NotBlank private String phoneNumber;
+        private String tenantId;
+        private String adminCode;
     }
 
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor
     public static class LoginRequest {
         @NotBlank private String username;
         @NotBlank private String password;
+        @NotBlank private String tenantId;
     }
 
     @Getter @AllArgsConstructor
     public static class TokenResponse {
         private String accessToken;
         private String tokenType;
+        private String role;
     }
 }
+
