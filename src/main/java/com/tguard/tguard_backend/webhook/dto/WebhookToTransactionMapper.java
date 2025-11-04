@@ -10,7 +10,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,9 +63,64 @@ public class WebhookToTransactionMapper {
     }
 
     private User resolveUser(PaymentWebhookEvent event, String tenantId) {
-        return resolveByCard(event, tenantId)
+        return resolveByTestPhoneNumber(event, tenantId)
+                .or(() -> resolveByCard(event, tenantId))
                 .or(() -> resolveByOrderId(event, tenantId))
                 .orElseThrow(() -> new IllegalArgumentException("user not found for webhook event"));
+    }
+
+    private Optional<User> resolveByTestPhoneNumber(PaymentWebhookEvent event, String tenantId) {
+        if (!hasText(event.testPhoneNumber())) {
+            return Optional.empty();
+        }
+        String raw = event.testPhoneNumber().trim();
+        Set<String> candidates = new LinkedHashSet<>();
+        candidates.add(raw);
+
+        String digits = raw.replaceAll("[^0-9]", "");
+        if (!digits.isBlank()) {
+            candidates.add(digits);
+            if (digits.startsWith("82")) {
+                String withoutCountry = digits.substring(2);
+                if (withoutCountry.startsWith("0")) {
+                    withoutCountry = withoutCountry.substring(1);
+                }
+                if (!withoutCountry.isBlank()) {
+                    candidates.add("+82" + withoutCountry);
+                    candidates.add("0" + withoutCountry);
+                } else {
+                    candidates.add("+82");
+                }
+            } else if (digits.startsWith("0")) {
+                String withoutZero = digits.substring(1);
+                if (!withoutZero.isBlank()) {
+                    candidates.add("+82" + withoutZero);
+                }
+            } else {
+                candidates.add("0" + digits);
+                candidates.add("+82" + digits);
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            return Optional.empty();
+        }
+
+        List<User> matches = userRepository.findByTenantIdAndPhoneNumberIn(tenantId, candidates);
+        if (matches.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Map<String, User> matchesByPhone = matches.stream()
+                .collect(Collectors.toMap(User::getPhoneNumber, Function.identity(), (existing, ignored) -> existing));
+
+        for (String candidate : candidates) {
+            User found = matchesByPhone.get(candidate);
+            if (found != null) {
+                return Optional.of(found);
+            }
+        }
+        return Optional.empty();
     }
 
     private Optional<User> resolveByCard(PaymentWebhookEvent event, String tenantId) {
