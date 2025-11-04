@@ -15,12 +15,13 @@ public record PaymentWebhookEvent(
         LocalDateTime occurredAt,
         String paymentKey,
         String orderId,
-        String rawPayload
+        String rawPayload,
+        String testPhoneNumber
 ) {
     public PaymentWebhookEvent withRawPayload(String rawPayload) {
         return new PaymentWebhookEvent(
                 this.eventId, this.status, this.brand, this.last4, this.amount,
                 this.currency, this.merchant, this.channel, this.deviceInfo, this.occurredAt,
-                this.paymentKey, this.orderId, rawPayload);
+                this.paymentKey, this.orderId, rawPayload, this.testPhoneNumber);
     }
 }
