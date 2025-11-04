@@ -99,6 +99,7 @@ DLQ 파이프라인 : 실패 이벤트 → DlqRetryService 재시도 → Slack �
      TWILIO_AUTH_TOKEN=...
      TWILIO_FROM_PHONE=...
      JWT_SECRET=...
+     TGUARD_AUTH_ADMIN_CODE=...
      ```
    - 개발/테스트용으로는 `application-example.yml`의 구조를 참고해 `.env` 혹은 `application-local.yml` 작성
 
@@ -123,6 +124,23 @@ DLQ 파이프라인 : 실패 이벤트 → DlqRetryService 재시도 → Slack �
 - `TenantContextFilterTest`: 요청 lifecycle에서 컨텍스트 설정/정리 확인
 - `TransactionFlowIntegrationTest`: 웹훅 → 탐지 → 알림 e2e 플로우
 - `DlqRetryServiceTest`: DLQ 경고 임계치와 최대 시도 알림 로직 검증
+
+### 테넌트 & 인증 규칙
+- **모든 보호 API**는 `Authorization: Bearer <JWT>`와 `X-Tenant-Id` 헤더가 반드시 포함돼야 합니다. 로그인/회원가입 역시 동일하게 헤더를 요구합니다.
+- 테넌트가 미등록/비활성 상태이면 403과 함께 `{"message":"Tenant is not allowed"}` 형태의 응답이 내려옵니다.
+- `/api/tenants/{tenantId}`는 프런트에서 테넌트 유효성을 사전 검증할 수 있도록 공개돼 있습니다.
+- 관리자(ROLE_ADMIN)는 `/api/admin/**` 하위 경로에서만 테넌트 생성 등 관리 기능을 호출할 수 있습니다.
+- `POST /api/auth/signup` 시
+  - `adminCode`가 `tguard.auth.admin-code`와 일치하면 `tenantId = 0`, `ROLE_ADMIN`으로 가입합니다.
+  - 그렇지 않으면 `tenantId` 필드는 필수이며, 해당 값이 활성 테넌트인지 서버가 검증한 뒤 `ROLE_USER`로 가입합니다.
+- `POST /api/auth/login` 역시 `tenantId`를 함께 전송해야 하며, 관리자는 `"0"`을 사용합니다.
+
+### API 하이라이트 (추가)
+- `POST /api/admin/tenants` : 새로운 테넌트 생성(관리자 전용)
+- `GET /api/admin/tenants` : 등록된 테넌트 목록 조회
+- `GET /api/tenants/{tenantId}` : 테넌트 유효성 확인(무인증)
+- `GET /api/user/me` : 로그인한 사용자의 `id, username, tenantId, role` 반환
+- `POST /api/webhooks/payments` : 테스트 친화적인 JSON 응답(`status`, `message`, `transactionId`) 제공
 
 ---
 
