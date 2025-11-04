@@ -1,13 +1,19 @@
 package com.tguard.tguard_backend.webhook.service;
 
+import com.tguard.tguard_backend.transaction.dto.TransactionResponse;
 import com.tguard.tguard_backend.transaction.service.TransactionService;
 import com.tguard.tguard_backend.webhook.WebhookIdempotencyStore;
 import com.tguard.tguard_backend.webhook.adapter.PaymentAdapter;
 import com.tguard.tguard_backend.webhook.dto.PaymentWebhookEvent;
 import com.tguard.tguard_backend.webhook.filter.WebhookSignatureVerifier;
-import jakarta.transaction.Transactional;
+import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,17 +30,30 @@ public class PaymentWebhookService {
         }
     }
 
+    @Timed("webhook.handle")
     @Transactional
-    public void handle(String rawBody, String idemKey) {
-        // 1) 공급자별 payload → 공통 DTO
-        PaymentWebhookEvent event = paymentAdapter.toCommonEvent(rawBody);
+    public Optional<TransactionResponse> handle(String rawBody, String idemKey) {
+        Timer.Sample sample = Timer.start(Metrics.globalRegistry);
+        try {
+            PaymentWebhookEvent event = paymentAdapter.toCommonEvent(rawBody);
 
-        // 2) 멱등성(이벤트ID 우선), 보조로 Idempotency-Key
-        String idemKeyFinal = (idemKey != null && !idemKey.isBlank()) ? idemKey : event.eventId();
-        if (!idempotencyStore.markIfFirstSeen(idemKeyFinal)) return;
+            String idemKeyFinal = (idemKey != null && !idemKey.isBlank()) ? idemKey : event.eventId();
+            if (!idempotencyStore.markIfFirstSeen(idemKeyFinal)) {
+                return Optional.empty();
+            }
 
-        // 3) Transaction 저장 + 후속 처리(이상탐지→문자발송)
-        transactionService.recordFromWebhook(event);
+            TransactionResponse response = transactionService.recordFromWebhook(event);
+            return Optional.ofNullable(response);
+        } finally {
+            sample.stop(timer("webhook.handle.manual", "layer", "service"));
+        }
+    }
+
+    private Timer timer(String name, String... tags) {
+        return Timer.builder(name)
+                .publishPercentiles(0.5, 0.9, 0.95, 0.99)
+                .publishPercentileHistogram()
+                .tags(tags)
+                .register(Metrics.globalRegistry);
     }
 }
-
