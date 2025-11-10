@@ -134,9 +134,10 @@ public class PipelineMonitoringService {
     }
 
     private void sendBatchAlert(String tenantId, long count, BatchTransactionEvent oldest) {
-        String oldestTime = oldest != null && oldest.getTransactionTime() != null
-                ? oldest.getTransactionTime().toString()
-                : "unknown";
+        String oldestTime = "unknown";
+        if (oldest != null && oldest.getTransactionTime() != null) {
+            oldestTime = oldest.getTransactionTime().toString();
+        }
         slackNotifier.sendMessage(String.format(
                 ":warning: Tenant %s batch queue above threshold. pendingCount=%d oldestEvent=%s",
                 tenantId, count, oldestTime
