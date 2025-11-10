@@ -8,10 +8,16 @@ public record TenantProperties(
         String defaultTenant
 ) {
     public String headerOrDefault() {
-        return header != null && !header.isBlank() ? header : "X-Tenant-Id";
+        if (header != null && !header.isBlank()) {
+            return header;
+        }
+        return "X-Tenant-Id";
     }
 
     public String defaultTenantOr(String fallback) {
-        return defaultTenant != null && !defaultTenant.isBlank() ? defaultTenant : fallback;
+        if (defaultTenant != null && !defaultTenant.isBlank()) {
+            return defaultTenant;
+        }
+        return fallback;
     }
 }
