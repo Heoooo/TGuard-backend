@@ -34,12 +34,17 @@ public class CardService {
             throw new ResponseStatusException(CONFLICT, "Card already registered.");
         }
 
+        String nickname = req.nickname();
+        if (nickname != null) {
+            nickname = nickname.trim();
+        }
+
         Card saved = cardRepository.save(
                 Card.builder()
                         .owner(owner)
                         .brand(req.brand().trim())
                         .last4(req.last4().trim())
-                        .nickname(req.nickname() == null ? null : req.nickname().trim())
+                        .nickname(nickname)
                         .build()
         );
         return toResponse(saved);
@@ -63,7 +68,11 @@ public class CardService {
         String tenantId = TenantContextHolder.requireTenantId();
         Card card = cardRepository.findByIdAndOwner_TenantIdAndOwner_Username(cardId, tenantId, username)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Card not found."));
-        card.setNickname(nickname == null ? null : nickname.trim());
+        if (nickname != null) {
+            card.setNickname(nickname.trim());
+        } else {
+            card.setNickname(null);
+        }
         return toResponse(card);
     }
 
