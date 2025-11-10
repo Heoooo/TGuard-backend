@@ -209,7 +209,8 @@ public class DetectionResultService {
             context.amountZScore = 0.0;
         }
     }
-private Optional<AmountStats> calculateAmountStats(String tenantId, Transaction transaction) {
+
+    private Optional<AmountStats> calculateAmountStats(String tenantId, Transaction transaction) {
         List<Transaction> recent = transactionRepository.findTop10ByTenantIdAndUserOrderByTransactionTimeDesc(tenantId, transaction.getUser());
         List<Double> amounts = recent.stream()
                 .filter(t -> !Objects.equals(t.getId(), transaction.getId()))
@@ -260,19 +261,22 @@ private Optional<AmountStats> calculateAmountStats(String tenantId, Transaction 
 
     private long trackRapidSequentialCount(Transaction transaction) {
         String key = "tenant:" + transaction.getTenantId() + ":transaction:recent:timestamps:" + transaction.getUser().getId();
-        LocalDateTime occurred = transaction.getTransactionTime() != null
-                ? transaction.getTransactionTime()
-                : LocalDateTime.now();
+        LocalDateTime occurred = transaction.getTransactionTime();
+        if (occurred == null) {
+            occurred = LocalDateTime.now();
+        }
+        final LocalDateTime occurredFinal = occurred;
 
         List<String> timestamps = redisTemplate.opsForList().range(key, 0, -1);
-        long recentCount = timestamps != null
-                ? timestamps.stream()
-                .map(LocalDateTime::parse)
-                .filter(ts -> ts.isAfter(occurred.minusMinutes(1)))
-                .count()
-                : 0;
+        long recentCount = 0;
+        if (timestamps != null) {
+            recentCount = timestamps.stream()
+                    .map(LocalDateTime::parse)
+                    .filter(ts -> ts.isAfter(occurredFinal.minusMinutes(1)))
+                    .count();
+        }
 
-        redisTemplate.opsForList().rightPush(key, occurred.toString());
+        redisTemplate.opsForList().rightPush(key, occurredFinal.toString());
         redisTemplate.expire(key, Duration.ofMinutes(1));
         return recentCount;
     }
@@ -323,11 +327,17 @@ private Optional<AmountStats> calculateAmountStats(String tenantId, Transaction 
             z += 1.0;
         }
         double probability = 1.0 / (1.0 + Math.exp(-z));
-        return Double.isFinite(probability) ? probability : 0.5;
+        if (Double.isFinite(probability)) {
+            return probability;
+        }
+        return 0.5;
     }
 
     private String defaultString(String value, String fallback) {
-        return hasText(value) ? value : fallback;
+        if (hasText(value)) {
+            return value;
+        }
+        return fallback;
     }
 
     private boolean abroadTransactionCheck(Transaction transaction) {
