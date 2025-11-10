@@ -84,7 +84,10 @@ public class BatchAnalysisService {
                 .mapToDouble(Double::doubleValue)
                 .sum();
         int count = events.size();
-        double averageAmount = count > 0 ? totalAmount / count : 0.0;
+        double averageAmount = 0.0;
+        if (count > 0) {
+            averageAmount = totalAmount / count;
+        }
         String dominantChannel = events.stream()
                 .map(BatchTransactionEvent::getChannel)
                 .filter(Objects::nonNull)
