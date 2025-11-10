@@ -60,6 +60,9 @@ public class DefaultUserNotifier implements UserNotifier {
     }
 
     private String defaultString(String value, String fallback) {
-        return value == null || value.isBlank() ? fallback : value;
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        return value;
     }
 }
