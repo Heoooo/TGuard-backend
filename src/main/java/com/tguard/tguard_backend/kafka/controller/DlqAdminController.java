@@ -60,7 +60,10 @@ public class DlqAdminController {
 
     private String dlqTopic() {
         String topic = kafkaTopicProperties.dlq();
-        return topic == null || topic.isBlank() ? "transactions-dlq" : topic;
+        if (topic == null || topic.isBlank()) {
+            return "transactions-dlq";
+        }
+        return topic;
     }
 
     public record DlqRetryRequest(@NotNull Long messageId) {
