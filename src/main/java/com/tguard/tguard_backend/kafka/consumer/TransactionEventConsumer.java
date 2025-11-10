@@ -60,7 +60,7 @@ public class TransactionEventConsumer {
                 .amount(event.amount())
                 .location(event.location())
                 .deviceInfo(event.deviceInfo())
-                .transactionTime(event.transactionTime() != null ? event.transactionTime() : LocalDateTime.now())
+                .transactionTime(resolveTransactionTime(event.transactionTime()))
                 .status(Transaction.Status.PENDING)
                 .channel(resolveChannel(event.channel()))
                 .build();
@@ -78,5 +78,12 @@ public class TransactionEventConsumer {
             log.warn("Unknown channel '{}' received from transaction event", channel);
             return Channel.UNKNOWN;
         }
+    }
+
+    private LocalDateTime resolveTransactionTime(LocalDateTime transactionTime) {
+        if (transactionTime == null) {
+            return LocalDateTime.now();
+        }
+        return transactionTime;
     }
 }
