@@ -117,10 +117,11 @@ public class DlqRetryService {
     }
 
     private void notifyMaxAttemptReached(DlqTransactionRetry retry) {
+        String transactionId = transactionIdOrUnknown(retry);
         String alertMessage = String.format(
                 ":rotating_light: DLQ retry attempts exceeded. tenant=%s transaction=%s attempts=%d lastError=%s (%s)",
                 retry.getTenantId(),
-                retry.getTransactionId() != null ? retry.getTransactionId() : "unknown",
+                transactionId,
                 retry.getAttemptCount(),
                 retry.getErrorMessage(),
                 retry.getErrorType()
@@ -145,7 +146,7 @@ public class DlqRetryService {
         slackNotifier.sendMessage(String.format(
                 ":warning: DLQ retry warning tenant=%s transaction=%s attempts=%d/%d lastError=%s (%s)",
                 retry.getTenantId(),
-                retry.getTransactionId() != null ? retry.getTransactionId() : "unknown",
+                transactionIdOrUnknown(retry),
                 retry.getAttemptCount(),
                 pipelineProperties.dlq().maxAttempts(),
                 retry.getErrorMessage(),
@@ -172,5 +173,13 @@ public class DlqRetryService {
                     retry.getId(), retry.getTenantId(), retry.getTransactionId(), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retry DLQ message", ex);
         }
+    }
+
+    private String transactionIdOrUnknown(DlqTransactionRetry retry) {
+        Long transactionId = retry.getTransactionId();
+        if (transactionId == null) {
+            return "unknown";
+        }
+        return transactionId.toString();
     }
 }
