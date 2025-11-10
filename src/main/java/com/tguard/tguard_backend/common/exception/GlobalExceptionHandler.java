@@ -23,7 +23,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiResponse<Void>> handleResponseStatus(ResponseStatusException ex) {
         HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
-        return ResponseEntity.status(status != null ? status : HttpStatus.BAD_REQUEST)
+        HttpStatus resolvedStatus = HttpStatus.BAD_REQUEST;
+        if (status != null) {
+            resolvedStatus = status;
+        }
+        return ResponseEntity.status(resolvedStatus)
                 .body(ApiResponse.fail(ex.getReason()));
     }
 
