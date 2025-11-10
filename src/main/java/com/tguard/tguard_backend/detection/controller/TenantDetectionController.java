@@ -14,10 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * Tenant scoped detection APIs that can be used by both administrators and operators.
- * Data access is still restricted per tenant via {@link com.tguard.tguard_backend.common.tenant.TenantContextHolder}.
- */
 @RestController
 @RequestMapping("/api/detections")
 @RequiredArgsConstructor
