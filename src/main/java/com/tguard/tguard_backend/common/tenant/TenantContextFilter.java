@@ -62,7 +62,11 @@ public class TenantContextFilter extends OncePerRequestFilter {
             tenantService.ensureActiveTenantOrThrow(tenantId);
         } catch (ResponseStatusException ex) {
             HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
-            writeError(response, status != null ? status : HttpStatus.BAD_REQUEST, ex.getReason());
+            HttpStatus resolvedStatus = HttpStatus.BAD_REQUEST;
+            if (status != null) {
+                resolvedStatus = status;
+            }
+            writeError(response, resolvedStatus, ex.getReason());
             return;
         }
 
@@ -81,7 +85,11 @@ public class TenantContextFilter extends OncePerRequestFilter {
         response.setStatus(status.value());
         response.setContentType("application/json");
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        ApiResponse<Void> body = ApiResponse.fail(message != null ? message : status.getReasonPhrase());
+        String bodyMessage = status.getReasonPhrase();
+        if (message != null) {
+            bodyMessage = message;
+        }
+        ApiResponse<Void> body = ApiResponse.fail(bodyMessage);
         response.getWriter().write(objectMapper.writeValueAsString(body));
     }
 }
