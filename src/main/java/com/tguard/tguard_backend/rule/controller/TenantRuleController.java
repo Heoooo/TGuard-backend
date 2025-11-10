@@ -12,9 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Tenant scoped rule management API that can be consumed by operators.
- */
 @RestController
 @RequestMapping("/api/rules")
 @RequiredArgsConstructor
