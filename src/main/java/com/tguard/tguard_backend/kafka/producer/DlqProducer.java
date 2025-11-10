@@ -17,10 +17,16 @@ public class DlqProducer {
     private final KafkaTopicProperties topicProperties;
 
     public void sendToDlq(TransactionEvent event, Exception exception) {
+        String message = null;
+        String errorType = null;
+        if (exception != null) {
+            message = exception.getMessage();
+            errorType = exception.getClass().getSimpleName();
+        }
         DlqEvent dlqEvent = new DlqEvent(
                 event,
-                exception != null ? exception.getMessage() : null,
-                exception != null ? exception.getClass().getSimpleName() : null,
+                message,
+                errorType,
                 LocalDateTime.now()
         );
         dlqKafkaTemplate.send(topicProperties.dlq(), dlqEvent);
