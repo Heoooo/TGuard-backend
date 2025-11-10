@@ -10,9 +10,15 @@ public record PipelineProperties(
 ) {
 
     public PipelineProperties {
-        dlq = dlq != null ? dlq : new DlqProperties(3, 60, 2);
-        batch = batch != null ? batch : new BatchProperties(7);
-        monitoring = monitoring != null ? monitoring : new MonitoringProperties(500, 15);
+        if (dlq == null) {
+            dlq = new DlqProperties(3, 60, 2);
+        }
+        if (batch == null) {
+            batch = new BatchProperties(7);
+        }
+        if (monitoring == null) {
+            monitoring = new MonitoringProperties(500, 15);
+        }
     }
 
     public record DlqProperties(
@@ -23,7 +29,11 @@ public record PipelineProperties(
         public DlqProperties {
             maxAttempts = Math.max(1, maxAttempts);
             baseRetryDelaySeconds = Math.max(1, baseRetryDelaySeconds);
-            warnAttempts = warnAttempts <= 0 ? Math.max(1, maxAttempts - 1) : Math.min(warnAttempts, maxAttempts);
+            if (warnAttempts <= 0) {
+                warnAttempts = Math.max(1, maxAttempts - 1);
+            } else {
+                warnAttempts = Math.min(warnAttempts, maxAttempts);
+            }
         }
     }
 
@@ -31,10 +41,6 @@ public record PipelineProperties(
             int retentionDays
     ) { }
 
-    /**
-     * monitoringWindowMinutes: how far back (minutes) we consider when checking lag/volume
-     * maxUnprocessedEvents: threshold for batch queue size per tenant.
-     */
     public record MonitoringProperties(
             int maxUnprocessedEvents,
             int monitoringWindowMinutes
