@@ -14,9 +14,6 @@ import org.springframework.util.StringUtils;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
-
-    
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
@@ -40,7 +37,10 @@ public class AuthService {
             throw new IllegalArgumentException("Phone number already registered for this tenant.");
         }
 
-        String role = isAdmin ? "ROLE_ADMIN" : "ROLE_USER";
+        String role = "ROLE_USER";
+        if (isAdmin) {
+            role = "ROLE_ADMIN";
+        }
         User user = User.builder()
                 .tenantId(tenantId)
                 .username(req.getUsername())
