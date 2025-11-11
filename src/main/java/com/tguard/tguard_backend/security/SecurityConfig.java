@@ -76,6 +76,10 @@ public class SecurityConfig {
         configuration.addAllowedHeader("Authorization");
         configuration.addAllowedHeader("Content-Type");
         configuration.addAllowedHeader("X-Tenant-Id");
+        configuration.addAllowedHeader("Idempotency-Key");
+        configuration.addAllowedHeader("X-Payment-Signature");
+        configuration.addAllowedHeader("idempotency-key");
+        configuration.addAllowedHeader("x-payment-signature");
         configuration.addAllowedHeader("Accept");
         configuration.addAllowedMethod("GET");
         configuration.addAllowedMethod("POST");
