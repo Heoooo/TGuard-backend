@@ -70,7 +70,6 @@ public class RuleService {
         return toResponse(rule);
     }
 
-    /* Deprecated admin entity-based operations kept for backward compatibility */
     @Transactional
     public RuleResponse addRule(Rule rule) {
         RuleRequest request = new RuleRequest(rule.getRuleName(), rule.getDescription(), rule.getType(), rule.isActive());
