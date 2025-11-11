@@ -11,6 +11,9 @@ public record RuleRequest(
         Boolean active
 ) {
     public boolean activeOrDefault() {
-        return active != null ? active : true;
+        if (active != null) {
+            return active;
+        }
+        return true;
     }
 }
