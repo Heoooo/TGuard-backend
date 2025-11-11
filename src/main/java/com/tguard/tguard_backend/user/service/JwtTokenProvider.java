@@ -57,6 +57,9 @@ public class JwtTokenProvider {
 
     public String getRole(String token) {
         Object role = parseClaims(token).getBody().get("role");
-        return role == null ? null : role.toString();
+        if (role == null) {
+            return null;
+        }
+        return role.toString();
     }
 }
