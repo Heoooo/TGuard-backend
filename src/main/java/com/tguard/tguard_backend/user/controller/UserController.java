@@ -23,7 +23,10 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserProfileResponse>> me() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = (authentication != null) ? authentication.getName() : null;
+        String username = null;
+        if (authentication != null) {
+            username = authentication.getName();
+        }
         String tenantId = TenantContextHolder.requireTenantId();
 
         User user = userRepository.findByUsernameAndTenantId(username, tenantId)
