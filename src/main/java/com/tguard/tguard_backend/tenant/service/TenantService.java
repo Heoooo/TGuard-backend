@@ -94,7 +94,10 @@ public class TenantService {
     }
 
     private String normalize(String tenantId) {
-        return tenantId == null ? null : tenantId.trim();
+        if (tenantId == null) {
+            return null;
+        }
+        return tenantId.trim();
     }
 
     private TenantDtos.TenantResponse toResponse(Tenant tenant) {
