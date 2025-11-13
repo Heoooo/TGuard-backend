@@ -42,8 +42,18 @@ public class WebhookToTransactionMapper {
             default -> Channel.UNKNOWN;
         };
 
-        Double amount = event.amount() != null ? event.amount().doubleValue() : null;
-        LocalDateTime occurredAt = event.occurredAt() != null ? event.occurredAt() : LocalDateTime.now();
+        Double amount = null;
+        if (event.amount() != null) {
+            amount = event.amount().doubleValue();
+        }
+        LocalDateTime occurredAt = event.occurredAt();
+        if (occurredAt == null) {
+            occurredAt = LocalDateTime.now();
+        }
+        String externalEventId = null;
+        if (hasText(event.eventId())) {
+            externalEventId = event.eventId();
+        }
 
         return Transaction.builder()
                 .tenantId(tenantId)
@@ -54,7 +64,7 @@ public class WebhookToTransactionMapper {
                 .transactionTime(occurredAt)
                 .status(status)
                 .channel(channel)
-                .externalEventId(hasText(event.eventId()) ? event.eventId() : null)
+                .externalEventId(externalEventId)
                 .paymentKey(event.paymentKey())
                 .orderId(event.orderId())
                 .currency(event.currency())
