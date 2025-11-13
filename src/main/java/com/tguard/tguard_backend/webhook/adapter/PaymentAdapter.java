@@ -4,6 +4,7 @@ import com.tguard.tguard_backend.webhook.dto.PaymentWebhookEvent;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 
 @Component
@@ -27,9 +28,10 @@ public class PaymentAdapter {
         }
 
         String occurredAtStr = o.optString("occurred_at", o.optString("approvedAt"));
-        var occurredAt = occurredAtStr != null && !occurredAtStr.isBlank()
-                ? OffsetDateTime.parse(occurredAtStr).toLocalDateTime()
-                : null;
+        LocalDateTime occurredAt = null;
+        if (occurredAtStr != null && !occurredAtStr.isBlank()) {
+            occurredAt = OffsetDateTime.parse(occurredAtStr).toLocalDateTime();
+        }
 
         String paymentKey = o.optString("paymentKey", null);
         String orderId    = o.optString("orderId", null);
