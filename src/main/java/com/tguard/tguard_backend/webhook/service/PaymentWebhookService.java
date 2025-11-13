@@ -37,7 +37,10 @@ public class PaymentWebhookService {
         try {
             PaymentWebhookEvent event = paymentAdapter.toCommonEvent(rawBody);
 
-            String idemKeyFinal = (idemKey != null && !idemKey.isBlank()) ? idemKey : event.eventId();
+            String idemKeyFinal = idemKey;
+            if (idemKeyFinal == null || idemKeyFinal.isBlank()) {
+                idemKeyFinal = event.eventId();
+            }
             if (!idempotencyStore.markIfFirstSeen(idemKeyFinal)) {
                 return Optional.empty();
             }
