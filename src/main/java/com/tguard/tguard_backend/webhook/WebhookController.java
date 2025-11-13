@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/0") // 테스트 코드와 일관성을 위해 'webhooks'로 변경
+@RequestMapping("/0")
 @RequiredArgsConstructor
 public class WebhookController {
 
@@ -19,7 +19,7 @@ public class WebhookController {
     @PostMapping("/payment")
     public ResponseEntity<Void> receive(@RequestBody PaymentWebhookEvent event) {
         if (!"APPROVED".equalsIgnoreCase(event.status())) {
-            return ResponseEntity.ok().build(); // 승인된 건만 저장
+            return ResponseEntity.ok().build();
         }
 
         transactionService.recordFromWebhook(event);
