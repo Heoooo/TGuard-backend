@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 public record PaymentWebhook(
         String eventId,
         String status,
-        JSONObject card,   // 그대로 둠
+        JSONObject card,
         Long amount,
         String currency,
         String merchant,
