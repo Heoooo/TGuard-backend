@@ -6,6 +6,8 @@ import com.tguard.tguard_backend.card.repository.CardRepository;
 import com.tguard.tguard_backend.user.entity.User;
 import com.tguard.tguard_backend.user.repository.UserRepository;
 import com.tguard.tguard_backend.user.service.JwtTokenProvider;
+import com.tguard.tguard_backend.tenant.entity.Tenant;
+import com.tguard.tguard_backend.tenant.repository.TenantRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@ActiveProfiles("test")
 class TenantIsolationIntegrationTest {
 
     @Autowired
@@ -39,12 +43,27 @@ class TenantIsolationIntegrationTest {
     private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
+    private TenantRepository tenantRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
         cardRepository.deleteAll();
         userRepository.deleteAll();
+        tenantRepository.deleteAll();
+
+        tenantRepository.save(Tenant.builder()
+                .tenantId("tenant-a")
+                .displayName("Tenant A")
+                .active(true)
+                .build());
+        tenantRepository.save(Tenant.builder()
+                .tenantId("tenant-b")
+                .displayName("Tenant B")
+                .active(true)
+                .build());
 
         userRepository.save(User.builder()
                 .tenantId("tenant-a")
