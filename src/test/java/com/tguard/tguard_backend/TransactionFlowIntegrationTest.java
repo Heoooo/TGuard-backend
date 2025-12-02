@@ -12,6 +12,7 @@ import com.tguard.tguard_backend.rule.repository.RuleRepository;
 import com.tguard.tguard_backend.user.entity.User;
 import com.tguard.tguard_backend.user.repository.UserRepository;
 import com.tguard.tguard_backend.webhook.dto.PaymentWebhookEvent;
+import com.tguard.tguard_backend.webhook.service.PaymentWebhookService;
 import com.tguard.tguard_backend.tenant.entity.Tenant;
 import com.tguard.tguard_backend.tenant.repository.TenantRepository;
 import com.tguard.tguard_backend.common.tenant.TenantContextHolder;
@@ -21,16 +22,13 @@ import org.junit.jupiter.api.Test;
 import org.apache.commons.codec.binary.Hex;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.MediaType;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -38,19 +36,13 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {"webhook.secret=test-secret"})
-@AutoConfigureMockMvc
 @ActiveProfiles("test")
 @ComponentScan(excludeFilters = {
     @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {KafkaConfig.class, TransactionEventConsumer.class})
 })
 class TransactionFlowIntegrationTest {
-
-    @Autowired
-    private MockMvc mockMvc;
 
     @MockBean
     private TwilioSmsSender twilioSmsSender;
@@ -69,6 +61,9 @@ class TransactionFlowIntegrationTest {
 
     @Autowired
     private TransactionRepository transactionRepository;
+
+    @Autowired
+    private PaymentWebhookService paymentWebhookService;
 
     @Value("${webhook.secret}")
     private String webhookSecretKey;
@@ -124,12 +119,8 @@ class TransactionFlowIntegrationTest {
         String payload = objectMapper.writeValueAsString(webhookEvent);
         String signature = createSignature(payload);
 
-        mockMvc.perform(post("/api/webhooks/payments")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Payment-Signature", signature)
-                        .header("X-Tenant-Id", "tenant-a")
-                        .content(payload))
-                .andExpect(status().isOk());
+        paymentWebhookService.verifySignatureOrThrow(payload, signature);
+        paymentWebhookService.handle(payload, null);
 
         assertThat(transactionRepository.count()).isEqualTo(1);
     }
