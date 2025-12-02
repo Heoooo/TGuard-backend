@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
-@Profile({"default", "local", "dev", "test"})
+@Profile({"default", "local", "dev", "test", "docker"})
 public class WebhookIdempotencyStore {
     private final Set<String> seen = ConcurrentHashMap.newKeySet();
 
