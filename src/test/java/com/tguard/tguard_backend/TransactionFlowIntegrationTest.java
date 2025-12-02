@@ -96,9 +96,8 @@ class TransactionFlowIntegrationTest {
         // 테스트 웹훅 payload
         PaymentWebhookEvent webhookEvent = new PaymentWebhookEvent(
                 "evt_test_12345", "APPROVED", "VISA", "1234",
-                5_000_000L, "KRW", "Test Merchant", "ONLINE",
-                LocalDateTime.now(), "pay_key_test", "U:jinhyeok:order123", null
-        );
+                5_000_000L, "KRW", "Test Merchant", "ONLINE", "MOBILE",
+                LocalDateTime.now(), "pay_key_test", "U:jinhyeok:order123", null, null);
 
         String payload = objectMapper.writeValueAsString(webhookEvent);
         String signature = createSignature(payload);
