@@ -30,6 +30,7 @@ import java.util.Map;
 
 @EnableKafka
 @Configuration
+@org.springframework.context.annotation.Profile("!test")
 public class KafkaConfig {
 
     private final KafkaProperties kafkaProperties;
