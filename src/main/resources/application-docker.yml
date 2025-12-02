@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/tguard_db
+    username: 
+    password: 
+  flyway:
+    enabled: 
+  kafka:
+    bootstrap-servers: 
+
+logging:
+  level:
+    org.apache.kafka: 
+    org.springframework.kafka: 
+
+# Docker Compose로 띄운 Postgres 서비스(hostname=postgres)에 직접 붙도록 프로필을 분리했습니다.
