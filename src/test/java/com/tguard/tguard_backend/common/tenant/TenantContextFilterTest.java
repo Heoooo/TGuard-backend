@@ -57,8 +57,8 @@ class TenantContextFilterTest {
     }
 
     @Test
-    @DisplayName("헤더가 없으면 400 에러를 반환한다")
-    void returnsBadRequestWhenHeaderMissing() throws ServletException, IOException {
+    @DisplayName("헤더가 없으면 기본 테넌트로 fallback 한다")
+    void fallsBackToDefaultTenantWhenHeaderMissing() throws ServletException, IOException {
         TenantProperties props = new TenantProperties("X-Tenant-Id", "fallback");
         TenantContextFilter filter = new TenantContextFilter(props, tenantService, objectMapper);
 
@@ -70,13 +70,15 @@ class TenantContextFilterTest {
             @Override
             public void doFilter(ServletRequest request, ServletResponse response) {
                 chainInvoked.set(true);
+                assertThat(TenantContextHolder.getTenantId()).isEqualTo("fallback");
             }
         };
 
         filter.doFilter(request, response, chain);
 
-        assertThat(response.getStatus()).isEqualTo(400);
-        assertThat(chainInvoked).isFalse();
-        verifyNoInteractions(tenantService);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(chainInvoked).isTrue();
+        verify(tenantService).ensureActiveTenantOrThrow("fallback");
+        assertThat(TenantContextHolder.getTenantId()).isNull();
     }
 }
