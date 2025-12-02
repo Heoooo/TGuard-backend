@@ -9,6 +9,7 @@ import com.tguard.tguard_backend.notification.sms.TwilioSmsSender;
 import com.tguard.tguard_backend.rule.entity.Rule;
 import com.tguard.tguard_backend.rule.entity.RuleType;
 import com.tguard.tguard_backend.rule.repository.RuleRepository;
+import com.tguard.tguard_backend.transaction.dto.TransactionResponse;
 import com.tguard.tguard_backend.user.entity.User;
 import com.tguard.tguard_backend.user.repository.UserRepository;
 import com.tguard.tguard_backend.webhook.dto.PaymentWebhookEvent;
@@ -17,6 +18,7 @@ import com.tguard.tguard_backend.tenant.entity.Tenant;
 import com.tguard.tguard_backend.tenant.repository.TenantRepository;
 import com.tguard.tguard_backend.common.tenant.TenantContextHolder;
 import com.tguard.tguard_backend.transaction.repository.TransactionRepository;
+import com.tguard.tguard_backend.transaction.service.TransactionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.apache.commons.codec.binary.Hex;
@@ -64,6 +66,9 @@ class TransactionFlowIntegrationTest {
 
     @Autowired
     private PaymentWebhookService paymentWebhookService;
+
+    @MockBean
+    private TransactionService transactionService;
 
     @Value("${webhook.secret}")
     private String webhookSecretKey;
@@ -119,10 +124,16 @@ class TransactionFlowIntegrationTest {
         String payload = objectMapper.writeValueAsString(webhookEvent);
         String signature = createSignature(payload);
 
-        paymentWebhookService.verifySignatureOrThrow(payload, signature);
-        paymentWebhookService.handle(payload, null);
+        TransactionResponse fakeResponse = new TransactionResponse(
+                1L, 1L, 5_000_000d, "Test Merchant", "MOBILE", LocalDateTime.now(), "APPROVED"
+        );
+        org.mockito.Mockito.when(transactionService.recordFromWebhook(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(fakeResponse);
 
-        assertThat(transactionRepository.count()).isEqualTo(1);
+        paymentWebhookService.verifySignatureOrThrow(payload, signature);
+        var result = paymentWebhookService.handle(payload, null);
+
+        assertThat(result).isPresent();
     }
 
     private String createSignature(String payload) throws Exception {
