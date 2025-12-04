@@ -50,10 +50,11 @@ jobs:
             --instance-ids "i-02c7b507b4a259b5c" \
             --document-name "AWS-RunShellScript" \
             --comment "deploy $GITHUB_SHA" \
-            --parameters commands='[
-              "set -e",
-              "docker pull 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:${GITHUB_SHA}",
-              "docker stop tguard || true",
-              "docker rm tguard || true",
-              "docker run -d --name tguard --restart unless-stopped -p 8080:8080 --env-file /opt/tguard/.env 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:${GITHUB_SHA}"
-            ]'
+            --parameters "commands=[
+              \"set -e\",
+              \"docker pull 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:${GITHUB_SHA}\",
+              \"docker stop tguard || true\",
+              \"docker rm tguard || true\",
+              \"docker run -d --name tguard --restart unless-stopped -p 8080:8080 --env-file /opt/tguard/.env 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:${GITHUB_SHA}\"
+            ]"
+
