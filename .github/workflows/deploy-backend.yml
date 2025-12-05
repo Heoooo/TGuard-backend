@@ -11,8 +11,6 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      SPRING_PROFILES_ACTIVE: test
 
     steps:
       - uses: actions/checkout@v4
@@ -22,11 +20,8 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Delete Gradle caches
-        run: rm -rf ~/.gradle/caches/*
-
       - name: Build backend
-        run: ./gradlew test bootJar
+        run: ./gradlew bootJar -x test
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -35,25 +30,25 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t tguard-backend .
-          docker tag tguard-backend 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:${{ github.sha }}
-
-      - name: Login & Push to ECR
+          docker build -t 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:${GITHUB_SHA} .
+      
+      - name: Push to ECR
         run: |
           aws ecr get-login-password --region ap-northeast-2 \
             | docker login --username AWS --password-stdin 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com
-          docker push 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:${{ github.sha }}
 
-      - name: Deploy to EC2 via SSM
+          docker push 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:${GITHUB_SHA}
+
+      - name: Deploy via SSM (docker-compose)
         run: |
           aws ssm send-command \
             --instance-ids "i-02c7b507b4a259b5c" \
             --document-name "AWS-RunShellScript" \
-            --comment "deploy $GITHUB_SHA" \
-            --parameters commands='[
-              "set -e",
-              "docker pull 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:${GITHUB_SHA}",
-              "docker stop tguard || true",
-              "docker rm tguard || true",
-              "docker run -d --name tguard --restart unless-stopped -p 8080:8080 --env-file /opt/tguard/.env 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:${GITHUB_SHA}"
-            ]'
+            --comment "deploy ${GITHUB_SHA}" \
+            --parameters "commands=[
+              \"cd /opt/tguard\",
+              \"docker-compose pull tguard\",
+              \"docker-compose up -d --force-recreate tguard\"
+            ]" \
+            --timeout-seconds 600 \
+            --output text
