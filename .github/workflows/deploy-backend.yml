@@ -50,8 +50,8 @@ jobs:
             --comment "deploy ${GITHUB_SHA}" \
             --parameters "commands=[
               \"cd /opt/tguard\",
-              \"docker-compose pull backend\",
-              \"docker-compose up -d --force-recreate backend\"
+              \"docker-compose pull\",
+              \"docker-compose up -d --force-recreate\"
             ]" \
             --timeout-seconds 600 \
             --output text
