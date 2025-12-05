@@ -31,13 +31,16 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:${GITHUB_SHA} .
-      
+          docker tag 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:${GITHUB_SHA} \
+                     021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:latest
+
       - name: Push to ECR
         run: |
           aws ecr get-login-password --region ap-northeast-2 \
             | docker login --username AWS --password-stdin 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com
 
           docker push 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:${GITHUB_SHA}
+          docker push 021518180184.dkr.ecr.ap-northeast-2.amazonaws.com/tguard-backend:latest
 
       - name: Deploy via SSM (docker-compose)
         run: |
@@ -47,8 +50,8 @@ jobs:
             --comment "deploy ${GITHUB_SHA}" \
             --parameters "commands=[
               \"cd /opt/tguard\",
-              \"docker-compose pull tguard\",
-              \"docker-compose up -d --force-recreate tguard\"
+              \"docker-compose pull backend\",
+              \"docker-compose up -d --force-recreate backend\"
             ]" \
             --timeout-seconds 600 \
             --output text
