@@ -1,5 +1,6 @@
 package com.tguard.tguard_backend.security;
 
+import com.tguard.tguard_backend.common.tenant.TenantContextHolder;
 import com.tguard.tguard_backend.user.service.JwtTokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -16,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -26,7 +28,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String uri = request.getRequestURI();
         return uri.startsWith("/api/webhooks/")
+                || uri.startsWith("/api/tenants/")
+                || uri.startsWith("/actuator/")
                 || uri.equals("/api/health")
+                || uri.equals("/")
+                || uri.equals("/favicon.ico")
                 || uri.equals("/api/auth/login")
                 || uri.equals("/api/auth/signup");
     }
@@ -43,6 +49,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 String username = jwtTokenProvider.getUsername(token);
                 String role = jwtTokenProvider.getRole(token);
+                String tokenTenantId = jwtTokenProvider.getTenantId(token);
+
+                if (!isSameTenant(tokenTenantId, TenantContextHolder.getTenantId())) {
+                    SecurityContextHolder.clearContext();
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Tenant id does not match token");
+                    return;
+                }
 
                 List<SimpleGrantedAuthority> authorities = List.of();
                 if (role != null) {
@@ -60,5 +73,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         chain.doFilter(request, response);
+    }
+
+    private boolean isSameTenant(String tokenTenantId, String requestTenantId) {
+        if (!StringUtils.hasText(tokenTenantId) || !StringUtils.hasText(requestTenantId)) {
+            return false;
+        }
+        return Objects.equals(tokenTenantId.trim(), requestTenantId.trim());
     }
 }

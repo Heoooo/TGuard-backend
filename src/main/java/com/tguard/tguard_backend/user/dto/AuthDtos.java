@@ -33,6 +33,7 @@ public class AuthDtos {
         private String accessToken;
         private String tokenType;
         private String role;
+        private String tenantId;
     }
 }
 
