@@ -31,13 +31,14 @@ public class JwtTokenProvider {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String createToken(String username, String role) {
+    public String createToken(String username, String role, String tenantId) {
         Date now = new Date();
         Date exp = new Date(now.getTime() + validityInMs);
 
         return Jwts.builder()
                 .setSubject(username)
                 .claim("role", role)
+                .claim("tenantId", tenantId)
                 .setIssuedAt(now)
                 .setExpiration(exp)
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -61,5 +62,13 @@ public class JwtTokenProvider {
             return null;
         }
         return role.toString();
+    }
+
+    public String getTenantId(String token) {
+        Object tenantId = parseClaims(token).getBody().get("tenantId");
+        if (tenantId == null) {
+            return null;
+        }
+        return tenantId.toString();
     }
 }

@@ -60,8 +60,8 @@ public class AuthService {
             throw new IllegalArgumentException("Incorrect password.");
         }
 
-        String token = jwtTokenProvider.createToken(user.getUsername(), user.getRole());
-        return new AuthDtos.TokenResponse(token, "Bearer", user.getRole());
+        String token = jwtTokenProvider.createToken(user.getUsername(), user.getRole(), user.getTenantId());
+        return new AuthDtos.TokenResponse(token, "Bearer", user.getRole(), user.getTenantId());
     }
 
     private boolean isValidAdminCode(String adminCode) {

@@ -75,9 +75,9 @@ class TenantIsolationIntegrationTest {
     }
 
     @Test
-    @DisplayName("다른 테넌트 헤더로 접근 시 카드 조회가 차단된다")
+    @DisplayName("JWT 테넌트와 다른 테넌트 헤더로 접근 시 요청이 차단된다")
     void cardLookupIsTenantIsolated() throws Exception {
-        String token = jwtTokenProvider.createToken("alice", "ROLE_USER");
+        String token = jwtTokenProvider.createToken("alice", "ROLE_USER", "tenant-a");
         CardRequest request = new CardRequest("VISA", "1234", "개인카드");
 
         mockMvc.perform(post("/api/cards")
@@ -93,6 +93,6 @@ class TenantIsolationIntegrationTest {
         mockMvc.perform(get("/api/cards/{id}", cardId)
                         .header("Authorization", "Bearer " + token)
                         .header("X-Tenant-Id", "tenant-b"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 }
