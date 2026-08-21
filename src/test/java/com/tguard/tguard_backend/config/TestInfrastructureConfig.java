@@ -7,15 +7,26 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.kafka.core.KafkaTemplate;
+
+import java.time.Duration;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 @Configuration
 @Profile("test")
 public class TestInfrastructureConfig {
 
     @Bean
+    @SuppressWarnings("unchecked")
     public RedisTemplate<String, String> redisTemplateString() {
-        return Mockito.mock(RedisTemplate.class);
+        RedisTemplate<String, String> redisTemplate = Mockito.mock(RedisTemplate.class);
+        ValueOperations<String, String> valueOperations = Mockito.mock(ValueOperations.class);
+        Mockito.when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        Mockito.when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(true);
+        return redisTemplate;
     }
 
     @Bean
