@@ -2,7 +2,7 @@ package com.tguard.tguard_backend.transaction.service;
 
 import com.tguard.tguard_backend.common.tenant.TenantContextHolder;
 import com.tguard.tguard_backend.kafka.dto.TransactionEvent;
-import com.tguard.tguard_backend.kafka.producer.TransactionEventProducer;
+import com.tguard.tguard_backend.kafka.service.TransactionOutboxService;
 import com.tguard.tguard_backend.transaction.dto.TransactionMapper;
 import com.tguard.tguard_backend.transaction.dto.TransactionRequest;
 import com.tguard.tguard_backend.transaction.dto.TransactionResponse;
@@ -32,7 +32,7 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
-    private final TransactionEventProducer transactionEventProducer;
+    private final TransactionOutboxService transactionOutboxService;
     private final WebhookToTransactionMapper webhookMapper;
     private final TransactionMapper transactionMapper;
 
@@ -138,7 +138,7 @@ public class TransactionService {
                 tx.getTransactionTime(),
                 tx.getChannel().name()
         );
-        transactionEventProducer.send(event);
+        transactionOutboxService.enqueue(event);
     }
 
     private boolean hasText(String value) {
