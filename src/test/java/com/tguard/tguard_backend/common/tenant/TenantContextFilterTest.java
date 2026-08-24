@@ -81,4 +81,20 @@ class TenantContextFilterTest {
         verify(tenantService).ensureActiveTenantOrThrow("fallback");
         assertThat(TenantContextHolder.getTenantId()).isNull();
     }
+
+    @Test
+    @DisplayName("Actuator health는 테넌트 컨텍스트 필터를 건너뛴다")
+    void skipsActuatorHealth() throws ServletException, IOException {
+        TenantProperties props = new TenantProperties("X-Tenant-Id", "fallback");
+        TenantContextFilter filter = new TenantContextFilter(props, tenantService, objectMapper);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/actuator/health");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicBoolean chainInvoked = new AtomicBoolean(false);
+
+        filter.doFilter(request, response, (servletRequest, servletResponse) -> chainInvoked.set(true));
+
+        assertThat(chainInvoked).isTrue();
+        verifyNoInteractions(tenantService);
+    }
 }

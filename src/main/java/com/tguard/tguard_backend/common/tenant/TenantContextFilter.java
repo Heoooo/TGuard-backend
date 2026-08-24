@@ -41,6 +41,9 @@ public class TenantContextFilter extends OncePerRequestFilter {
         if (WHITELIST_PATHS.contains(path) || path.startsWith("/api/auth/")) {
             return true;
         }
+        if (path.equals("/actuator/health") || path.startsWith("/actuator/health/")) {
+            return true;
+        }
         return path.startsWith("/api/tenants");
     }
 
