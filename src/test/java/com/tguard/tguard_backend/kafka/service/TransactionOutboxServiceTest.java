@@ -27,6 +27,7 @@ class TransactionOutboxServiceTest {
     private TransactionOutboxEventRepository outboxRepository;
     private TransactionEventProducer transactionEventProducer;
     private TransactionOutboxService transactionOutboxService;
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
@@ -37,7 +38,7 @@ class TransactionOutboxServiceTest {
         topicProperties.setRealtime("transactions.realtime");
         topicProperties.setBatch("transactions.batch");
 
-        ObjectMapper objectMapper = new ObjectMapper()
+        objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
@@ -103,19 +104,7 @@ class TransactionOutboxServiceTest {
                 .tenantId("tenant-a")
                 .transactionId(10L)
                 .topic(topic)
-                .payload("""
-                        {
-                          "tenantId": "tenant-a",
-                          "transactionId": 10,
-                          "userId": 20,
-                          "amount": 5000.0,
-                          "location": "Seoul",
-                          "deviceInfo": "MOBILE",
-                          "transactionTime": "2026-08-24T10:00:00",
-                          "channel": "MOBILE",
-                          "publishedAt": "2026-08-24T10:00:00"
-                        }
-                        """)
+                .payload(serialize(event()))
                 .published(false)
                 .attemptCount(0)
                 .nextRetryAt(LocalDateTime.now().minusSeconds(1))
@@ -134,5 +123,13 @@ class TransactionOutboxServiceTest {
                 LocalDateTime.of(2026, 8, 24, 10, 0),
                 "MOBILE"
         );
+    }
+
+    private String serialize(TransactionEvent event) {
+        try {
+            return objectMapper.writeValueAsString(event);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 }
