@@ -12,6 +12,7 @@
   - `feat: Redis 기반 웹훅 멱등성 처리 추가`
   - `feat: 트랜잭션 Outbox 이벤트 발행 추가`
   - `feat: Actuator 엔드포인트 접근 제어 추가`
+  - `feat: CI 테스트 게이트 추가`
 
 ## 1) JWT Tenant Validation
 
@@ -113,6 +114,7 @@
 - Transactional Outbox 패턴을 도입해 거래 저장과 Kafka 발행의 정합성 리스크를 완화하고, realtime/batch topic별 독립 재시도 구조 구현
 - Outbox publisher를 최대 50건 단위 pending 조회, 10초 주기 스케줄링, `30초 * attempt` retry delay 방식으로 구현
 - Actuator endpoint 접근 정책을 분리해 `/actuator/health`만 공개하고 metrics/prometheus 등 운영 endpoint는 관리자 JWT 인증 뒤 접근하도록 개선
+- GitHub Actions 배포 workflow에 PR/push 테스트 게이트를 추가해 테스트 실패 시 배포 job이 실행되지 않도록 개선
 
 ## Interview Talking Points
 
@@ -120,6 +122,7 @@
 - "웹훅은 외부 시스템 특성상 같은 이벤트가 여러 번 올 수 있으므로, process-local 메모리보다 Redis SETNX를 사용해 분산 환경에서도 중복 처리를 막도록 했습니다."
 - "DB 저장과 Kafka 발행을 한 트랜잭션 메서드에 묶어두면 장애 시 상태가 갈라질 수 있어, outbox에 먼저 기록하고 별도 publisher가 재시도하는 구조로 변경했습니다."
 - "운영 지표는 장애 대응에 필요하지만 외부 공개 대상은 아니라고 판단했습니다. 그래서 health check만 공개하고 나머지 Actuator endpoint는 관리자 인증 대상으로 분리했습니다."
+- "CI에서 테스트를 건너뛰고 바로 배포 artifact를 만들던 구조는 회귀 결함을 놓칠 수 있다고 봤습니다. 그래서 test job을 별도로 만들고 deploy job이 test를 통과한 push에서만 실행되도록 분리했습니다."
 
 ## Metrics To Measure Next
 
@@ -158,3 +161,38 @@
 ### Portfolio Copy
 
 운영 정보 노출 리스크를 줄이기 위해 Actuator endpoint 접근 정책을 재정의했습니다. `/actuator/health`만 공개하고 metrics 등 나머지 운영 endpoint는 관리자 JWT 인증 및 테넌트 검증을 거치도록 분리했으며, 필터 단위 테스트로 health 공개와 metrics 보호 정책을 빠르게 검증했습니다.
+
+## 5) CI Test Gate
+
+### Problem
+
+- 기존 배포 workflow는 `./gradlew bootJar -x test`로 artifact를 만들고 있어 배포 전 테스트를 명시적으로 건너뛰고 있었다.
+- PR 단계에서 자동 테스트가 돌지 않아 보안/멱등성/Outbox 같은 핵심 변경의 회귀를 GitHub에서 바로 확인하기 어려웠다.
+- 테스트를 gate로 걸기 위해서는 기존 테스트 suite가 CI clean checkout에서도 통과하는지 확인해야 했다.
+
+### Action
+
+- GitHub Actions workflow에 `pull_request` trigger를 추가했다.
+- `test` job을 별도로 분리해 `./gradlew test`를 실행하도록 구성했다.
+- `deploy` job은 `needs: test`와 `if: github.event_name == 'push'` 조건을 추가해 main push에서 테스트 통과 후에만 실행되도록 했다.
+- `bootJar -x test`를 `bootJar`로 변경해 배포 job에서도 테스트 skip 옵션을 제거했다.
+- `actions/setup-java`에 Gradle cache를 설정해 dependency 다운로드 시간을 줄이도록 했다.
+- clean worktree 기준 전체 테스트를 실행해 CI checkout과 유사한 상태에서 검증했다.
+
+### Result
+
+- 배포 전 테스트 skip 경로를 제거하고, PR에서도 자동 테스트가 수행되는 구조로 개선했다.
+- 수치/설정:
+  - workflow trigger: `push` 1개에서 `push + pull_request` 2개로 확대
+  - CI job: `deploy` 단일 job에서 `test + deploy` 2개 job으로 분리
+  - test command: `./gradlew test`
+  - deploy dependency: `needs: test`
+  - test skip option: `-x test` 제거
+- 테스트:
+  - clean worktree 기준 전체 `./gradlew test` 통과
+  - 전체 테스트 수: `19개`
+  - 실행 시간: `34초`
+
+### Portfolio Copy
+
+배포 workflow에서 테스트를 건너뛰던 `bootJar -x test` 구조를 개선해 PR/push 단계의 테스트 게이트를 추가했습니다. `test`와 `deploy` job을 분리하고 deploy가 test 성공 이후 main push에서만 실행되도록 구성했으며, clean checkout 기준 19개 테스트를 34초에 통과시켜 CI 적용 가능성을 검증했습니다.
